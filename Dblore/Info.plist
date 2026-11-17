@@ -446,7 +446,7 @@
 	<false/>
 	<!-- Sparkle auto-update -->
 	<key>SUFeedURL</key>
-	<string>https://dinhanhthi.github.io/Dblore/appcast.xml</string>
+	<string>https://dblore.coprimal.dev/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>+HUXDzWR/yNBnJyO0cIfLhwU9ZJhwQ8iKnEU9R838JY=</string>
 	<key>SUEnableAutomaticChecks</key>

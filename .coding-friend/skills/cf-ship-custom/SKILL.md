@@ -240,12 +240,13 @@ scripts/release-local.sh --expect-version <tag version>
 
 What it does, in order:
 
-1. Preflight, machine checks first (Xcode = `.xcode-version`, Developer ID identity, `apple-notary` profile or `NOTARY_KEY_*` env, Sparkle key, `gh auth`), then repo checks (on `main`, clean tree, `HEAD` == `origin/main`, `<tag>` absent locally and on origin, `MARKETING_VERSION` == `<tag version>`, non-empty `## <tag>` section in `CHANGELOG.md`).
+1. Preflight, machine checks first (Xcode = `.xcode-version`, Developer ID identity, `apple-notary` profile or `NOTARY_KEY_*` env, Sparkle key, `gh auth`, push access to the old-feed mirror `dinhanhthi/dinhanhthi.github.io`, `scripts/sync-feed-mirror.sh` executable), then repo checks (on `main`, clean tree, `HEAD` == `origin/main`, `<tag>` absent locally and on origin, `MARKETING_VERSION` == `<tag version>`, non-empty `## <tag>` section in `CHANGELOG.md`).
 2. `scripts/build-release.sh --expect-version <tag version>`: archive, sign, notarize, staple; `dist/Dblore-<tag version>.dmg` + `.sha256`. Takes about 20 minutes.
 3. Re-checks that `HEAD` and the tree did not change, then generates and verifies the signed appcast in a temp dir with `generate_appcast` from `DerivedData/Dblore-*` only. Approve the Keychain prompt with "Always Allow".
 4. Only then creates the annotated tag `<tag>` on the release SHA and pushes it.
 5. `gh release create` with the DMG, the `.sha256` and the `CHANGELOG.md` section as notes.
 6. Commits `chore(release): appcast v<tag version>` and pushes `main`; that push triggers `pages.yml` (nothing is dispatched).
+7. `scripts/sync-feed-mirror.sh appcast.xml` copies the appcast to the old-feed mirror `dinhanhthi/dinhanhthi.github.io` (read by builds <= 0.10.1). The preflight already checked push access to it.
 
 In `--dry-run`, do not run the script: the B5 machine checks are the preflight.
 
@@ -308,6 +309,7 @@ printf '%s' "$feed" | grep -oE '<sparkle:version>[0-9]+</sparkle:version>' | gre
 
 - The item for `<tag version>` must exist, its `enclosure url` must be the release DMG above, and it must carry `sparkle:edSignature`.
 - Pages can serve the old feed for a minute after the deploy; retry the curl once before calling it a failure.
+- The old-feed mirror must equal the published appcast: `curl -sL https://dinhanhthi.github.io/Dblore/appcast.xml | cmp - appcast.xml` prints nothing (retry for a few minutes while its Pages build runs). If the script reported a mirror-sync failure, rerun `scripts/sync-feed-mirror.sh appcast.xml`.
 
 No pull is needed: the script committed `appcast.xml` locally and pushed it.
 

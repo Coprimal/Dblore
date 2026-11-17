@@ -33,8 +33,10 @@ Open http://localhost:8080.
 
 `.github/workflows/pages.yml` uploads this folder to GitHub Pages. It also publishes `appcast.xml` from the repo root, which Sparkle auto-update needs: do not remove it.
 
-One-time setup:
+Setup (done; keep it):
 
 1. Settings > Pages > Source = "GitHub Actions".
-2. DNS: add a `CNAME` record `dblore` pointing to `coprimal.github.io`.
-3. Settings > Pages: set the custom domain to `dblore.coprimal.dev` and enable "Enforce HTTPS".
+2. Cloudflare DNS for `coprimal.dev` (verified for the Coprimal org): `CNAME` record `dblore` pointing to `coprimal.github.io`, DNS only.
+3. Settings > Pages: custom domain `dblore.coprimal.dev`, "Enforce HTTPS" on.
+
+The old domain `dblore.dinhanhthi.com` 301s here through a Cloudflare redirect rule. Builds <= 0.10.1 read the feed from the mirror at `https://dinhanhthi.github.io/Dblore/appcast.xml`, which `scripts/release-local.sh` updates on every release (see CONTRIBUTING.md, Website).

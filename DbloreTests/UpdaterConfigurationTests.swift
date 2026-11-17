@@ -10,13 +10,13 @@ struct UpdaterConfigurationTests {
 
   private let info = Bundle.main.infoDictionary ?? [:]
 
-  @Test("SUFeedURL points to the GitHub Pages appcast over https")
+  @Test("SUFeedURL points to the dblore.coprimal.dev appcast over https")
   func testFeedURL() throws {
     let raw = try #require(info["SUFeedURL"] as? String)
     let url = try #require(URL(string: raw))
     #expect(url.scheme == "https")
-    #expect(url.host == "dinhanhthi.github.io")
-    #expect(url.path == "/Dblore/appcast.xml")
+    #expect(url.host == "dblore.coprimal.dev")
+    #expect(url.path == "/appcast.xml")
   }
 
   @Test("SUPublicEDKey is a base64 Ed25519 public key")

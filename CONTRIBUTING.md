@@ -480,17 +480,22 @@ Sparkle update feed), so keep that file at the repo root.
   version, `Unreleased` or `Unknown`, existing `sources`, a `commit` and `evidence`.
   `node --test website/features.test.js` enforces this; never weaken that test to make an entry
   pass.
-- **One-time setup (manual):** Settings > Pages > Source = "GitHub Actions" (keep it set,
-  otherwise the Sparkle feed breaks). For the custom domain `dblore.coprimal.dev`, add a
-  DNS CNAME record `dblore` -> `coprimal.github.io`, then set the custom domain in
-  Settings > Pages and enable Enforce HTTPS.
-- **Feed check:** before and after enabling the custom domain, run
-  `curl -IL https://dblore.coprimal.dev/appcast.xml`; it must end at HTTP 200.
-  `SUFeedURL` in `Info.plist` is unchanged and relies on that URL still resolving (the
-  redirect to the custom domain is assumed, so verify it).
-- **Rollback:** remove the custom domain in Settings > Pages so github.io serves directly
-  again. If the workflow itself is the problem, `git revert` the commit that merged
-  `pages.yml` (restores `deploy-appcast.yml`).
+- **Hosting:** Settings > Pages > Source = "GitHub Actions" (keep it set, otherwise the
+  Sparkle feed breaks), custom domain `dblore.coprimal.dev` with Enforce HTTPS. The domain is
+  verified for the Coprimal org; Cloudflare DNS has a CNAME `dblore` -> `coprimal.github.io`
+  (DNS only). `SUFeedURL` (since 0.10.2) is `https://dblore.coprimal.dev/appcast.xml`.
+- **Old addresses:** the repo moved from `dinhanhthi/Dblore` to `Coprimal/Dblore` in 0.10.2.
+  `dblore.dinhanhthi.com` 301s to `dblore.coprimal.dev` (path and query kept) through a
+  Cloudflare redirect rule. Builds <= 0.10.1 read `https://dinhanhthi.github.io/Dblore/appcast.xml`,
+  which GitHub no longer redirects, so the user site `dinhanhthi/dinhanhthi.github.io` serves a
+  mirror of the feed. `scripts/release-local.sh` updates it on every release through
+  `scripts/sync-feed-mirror.sh`; never edit it by hand.
+- **Never:** delete that mirror repo or give its site a custom domain, create a repo named
+  `dinhanhthi/Dblore` (it would break GitHub's redirects), or remove the redirect rule.
+- **Feed check:** `curl -IL https://dblore.coprimal.dev/appcast.xml` ends at HTTP 200, and
+  `curl -sL https://dinhanhthi.github.io/Dblore/appcast.xml | cmp - appcast.xml` prints nothing.
+- **Rollback:** if the workflow itself is the problem, `git revert` the commit that changed
+  `pages.yml`. Never remove the custom domain: released builds read the feed from it.
 
 ## License
 

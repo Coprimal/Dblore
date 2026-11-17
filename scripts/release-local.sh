@@ -193,6 +193,10 @@ security find-generic-password -s "https://sparkle-project.org" -a "$SPARKLE_ACC
   fail "Sparkle private key not found in the keychain (account $SPARKLE_ACCOUNT)"
 
 gh auth status >/dev/null 2>&1 || fail "gh is not authenticated. Run: gh auth login"
+# Builds <= 0.10.1 read the feed from this mirror (see scripts/sync-feed-mirror.sh)
+[[ "$(gh api repos/dinhanhthi/dinhanhthi.github.io --jq .permissions.push 2>/dev/null)" == "true" ]] ||
+  fail "cannot push to dinhanhthi/dinhanhthi.github.io (old-feed mirror)"
+[[ -x scripts/sync-feed-mirror.sh ]] || fail "scripts/sync-feed-mirror.sh is missing or not executable"
 
 # Repo checks
 branch=$(git rev-parse --abbrev-ref HEAD)
@@ -285,8 +289,11 @@ git add appcast.xml
 git commit -m "chore(release): appcast v$VERSION"
 # This push triggers pages.yml
 git push origin main ||
-  fail "release $TAG is published but pushing appcast.xml failed; rerun: git pull --rebase origin main && git push origin main"
+  fail "release $TAG is published but pushing appcast.xml failed; rerun: git pull --rebase origin main && git push origin main && scripts/sync-feed-mirror.sh appcast.xml"
+scripts/sync-feed-mirror.sh appcast.xml ||
+  fail "release $TAG and appcast are published but the old-feed mirror sync failed; rerun: scripts/sync-feed-mirror.sh appcast.xml"
 
 echo "==> Done"
 echo "release: $(gh release view "$TAG" --json url -q .url)"
 echo "feed:    https://dblore.coprimal.dev/appcast.xml"
+echo "mirror:  https://dinhanhthi.github.io/Dblore/appcast.xml"

@@ -25,8 +25,8 @@ struct AboutView: View {
           .foregroundColor(.foregroundSubtle)
 
         Link(
-          "github.com/dinhanhthi/Dblore",
-          destination: URL(string: "https://github.com/dinhanhthi/Dblore")!
+          "github.com/Coprimal/Dblore",
+          destination: URL(string: "https://github.com/Coprimal/Dblore")!
         )
         .font(.bodyText)
       }
@@ -34,8 +34,8 @@ struct AboutView: View {
       // Copyright
       HStack {
         Link(
-          "Anh-Thi Dinh",
-          destination: URL(string: "https://dinhanhthi.com")!
+          "Coprimal",
+          destination: URL(string: "https://github.com/Coprimal")!
         )
         .font(.labelText)
 

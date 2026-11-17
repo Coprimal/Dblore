@@ -17,7 +17,7 @@ struct PluginRegistryTests {
       id: id, version: version,
       url: URL(
         string:
-          "https://github.com/dinhanhthi/Dblore/releases/download/plugin-\(id)-v\(version)/\(library)"
+          "https://github.com/Coprimal/Dblore/releases/download/plugin-\(id)-v\(version)/\(library)"
       )!,
       sha256: String(repeating: "a", count: 64), maxSize: 1024, kind: .library(fileName: library))
   }

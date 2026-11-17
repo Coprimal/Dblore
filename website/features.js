@@ -71,7 +71,7 @@ function filterFeatures(features, query) {
 
 function featureIssueURL(feature) {
   const params = new URLSearchParams({ template: "bug_report.md", title: `Bug: ${feature}` });
-  return `https://github.com/dinhanhthi/Dblore/issues/new?${params}`;
+  return `https://github.com/Coprimal/Dblore/issues/new?${params}`;
 }
 
 if (typeof document !== "undefined") {

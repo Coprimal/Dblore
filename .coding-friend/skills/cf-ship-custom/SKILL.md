@@ -174,7 +174,7 @@ If the container is not running, skip IT and say so in the report. Do not start 
 
 ```bash
 build="$(grep -E '^[[:space:]]*CURRENT_PROJECT_VERSION = ' Dblore.xcodeproj/project.pbxproj | sed -E 's/.*= *"?([0-9]+)"?;.*/\1/' | sort -n | tail -1)"
-feed="$(curl -fsSL https://dinhanhthi.github.io/Dblore/appcast.xml 2>/dev/null || true)"
+feed="$(curl -fsSL https://dblore.coprimal.dev/appcast.xml 2>/dev/null || true)"
 last="$(printf '%s' "$feed" | grep -oE '<sparkle:version>[0-9]+</sparkle:version>' | grep -oE '[0-9]+' | sort -n | tail -1)"
 if [[ -z "$last" ]]; then echo "no published build yet: no constraint"; elif (( build > last )); then echo "ok: build $build > $last"; else echo "STOP: build $build must be > $last"; fi
 ```
@@ -184,10 +184,10 @@ An empty feed or a 404 (before the first Sparkle release) means no constraint. I
 **Release pre-flight.** Before committing, check that the release can publish an update users can actually download. Read-only; never print secret values:
 
 ```bash
-v="$(gh api repos/dinhanhthi/Dblore --jq .visibility 2>/dev/null)" || v=""
+v="$(gh api repos/Coprimal/Dblore --jq .visibility 2>/dev/null)" || v=""
 [[ "$v" == public ]] && echo "visibility: public" || echo "STOP: repo visibility is '${v:-unknown}', must be public"
 
-p="$(gh api repos/dinhanhthi/Dblore/pages --jq .build_type 2>/dev/null)" || p=""
+p="$(gh api repos/Coprimal/Dblore/pages --jq .build_type 2>/dev/null)" || p=""
 [[ "$p" == workflow ]] && echo "pages: GitHub Actions" || echo "STOP: Pages source is '${p:-not configured}', must be GitHub Actions (workflow)"
 ```
 
@@ -299,9 +299,9 @@ gh run watch <deploy-run-id> --exit-status --interval 30
 Then check the live feed:
 
 ```bash
-feed="$(curl -fsSL https://dinhanhthi.github.io/Dblore/appcast.xml)"
+feed="$(curl -fsSL https://dblore.coprimal.dev/appcast.xml)"
 printf '%s' "$feed" | grep -F "<sparkle:shortVersionString><tag version></sparkle:shortVersionString>"
-printf '%s' "$feed" | grep -F 'url="https://github.com/dinhanhthi/Dblore/releases/download/v<tag version>/Dblore-<tag version>.dmg"'
+printf '%s' "$feed" | grep -F 'url="https://github.com/Coprimal/Dblore/releases/download/v<tag version>/Dblore-<tag version>.dmg"'
 printf '%s' "$feed" | grep -F 'sparkle:edSignature='
 printf '%s' "$feed" | grep -oE '<sparkle:version>[0-9]+</sparkle:version>' | grep -oE '[0-9]+' | sort -n | tail -1   # the build <N> for B9 (highest = the new item)
 ```
@@ -318,7 +318,7 @@ Released:
   Dblore <tag> -> built and notarized on this Mac -> tag <tag> created by release-local.sh -> DMG + sha256
 
   Release: <gh release view <tag> --json url -q .url>
-  Appcast: live at https://dinhanhthi.github.io/Dblore/appcast.xml (<tag version>, build <N>)
+  Appcast: live at https://dblore.coprimal.dev/appcast.xml (<tag version>, build <N>)
   Feature catalog: <count> added, <count> promoted from Unreleased; published tag verified
   Docs: <files updated by B4c, or "no change">
 ```

@@ -73,7 +73,7 @@ nonisolated struct PluginDisplayInfo {
           ),
           (
             "Plugin source: Plugins/Engines in the Dblore repository",
-            URL(string: "https://github.com/dinhanhthi/Dblore/tree/main/Plugins/Engines")!
+            URL(string: "https://github.com/Coprimal/Dblore/tree/main/Plugins/Engines")!
           ),
           (
             "FreeTDS 1.5.21 source code (the version the plugin is built from)",

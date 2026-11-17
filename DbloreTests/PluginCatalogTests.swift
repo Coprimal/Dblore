@@ -6,7 +6,7 @@ import Testing
 @Suite struct PluginCatalogTests {
   private static let validSHA = String(repeating: "ab", count: 32)
   private static let validURL =
-    "https://github.com/dinhanhthi/Dblore/releases/download/plugin-duckdb-v1.5.6/libduckdb.dylib"
+    "https://github.com/Coprimal/Dblore/releases/download/plugin-duckdb-v1.5.6/libduckdb.dylib"
 
   private static func entry(
     id: String = "duckdb",
@@ -27,7 +27,7 @@ import Testing
 
   private static let validCDHash = String(repeating: "c0", count: 20)
   private static let validBundleURL =
-    "https://github.com/dinhanhthi/Dblore/releases/download/plugin-local-ai-v1.0.0/DbloreLocalAI.zip"
+    "https://github.com/Coprimal/Dblore/releases/download/plugin-local-ai-v1.0.0/DbloreLocalAI.zip"
 
   private static func bundleEntry(
     url: String = validBundleURL,
@@ -79,7 +79,7 @@ import Testing
     #expect(sqlServer.version == "1.0.0")
     #expect(
       sqlServer.url.absoluteString
-        == "https://github.com/dinhanhthi/Dblore/releases/download/plugin-sqlserver-v1.0.0/DbloreSQLServer.zip"
+        == "https://github.com/Coprimal/Dblore/releases/download/plugin-sqlserver-v1.0.0/DbloreSQLServer.zip"
     )
     guard case .bundle(let name, let identifier, _) = sqlServer.kind else {
       Issue.record("sqlserver is not a bundle: \(sqlServer.kind)")
@@ -91,7 +91,7 @@ import Testing
     #expect(clickHouse.version == "1.0.0")
     #expect(
       clickHouse.url.absoluteString
-        == "https://github.com/dinhanhthi/Dblore/releases/download/plugin-clickhouse-v1.0.0/DbloreClickHouse.zip"
+        == "https://github.com/Coprimal/Dblore/releases/download/plugin-clickhouse-v1.0.0/DbloreClickHouse.zip"
     )
     guard case .bundle(let chName, let chIdentifier, _) = clickHouse.kind else {
       Issue.record("clickhouse is not a bundle: \(clickHouse.kind)")
@@ -103,7 +103,7 @@ import Testing
     #expect(redis.version == "1.0.0")
     #expect(
       redis.url.absoluteString
-        == "https://github.com/dinhanhthi/Dblore/releases/download/plugin-redis-v1.0.0/DbloreRedis.zip"
+        == "https://github.com/Coprimal/Dblore/releases/download/plugin-redis-v1.0.0/DbloreRedis.zip"
     )
     guard case .bundle(let redisName, let redisIdentifier, _) = redis.kind else {
       Issue.record("redis is not a bundle: \(redis.kind)")
@@ -117,7 +117,7 @@ import Testing
     let other = Self.entry(
       id: "my-plugin-2", version: "0.1",
       url:
-        "https://github.com/dinhanhthi/Dblore/releases/download/plugin-my-plugin-2-v0.1/libother.dylib",
+        "https://github.com/Coprimal/Dblore/releases/download/plugin-my-plugin-2-v0.1/libother.dylib",
       maxSize: 268_435_456, libraryFileName: "libother.dylib")
     let catalog = try PluginCatalog.decode(
       Self.json(plugins: [Self.entry(), other, Self.bundleEntry()]))
@@ -140,11 +140,11 @@ import Testing
   // MARK: - Strict validation (the whole catalog fails closed)
 
   private static func url(_ suffix: String) -> [String: Any] {
-    entry(url: "https://github.com/dinhanhthi/Dblore/releases/download/" + suffix)
+    entry(url: "https://github.com/Coprimal/Dblore/releases/download/" + suffix)
   }
 
   private static func bundleURL(_ suffix: String) -> [String: Any] {
-    bundleEntry(url: "https://github.com/dinhanhthi/Dblore/releases/download/" + suffix)
+    bundleEntry(url: "https://github.com/Coprimal/Dblore/releases/download/" + suffix)
   }
 
   @Test(arguments: [
@@ -175,35 +175,35 @@ import Testing
       json(
         entry(
           url:
-            "http://github.com/dinhanhthi/Dblore/releases/download/plugin-duckdb-v1.5.6/libduckdb.dylib"
+            "http://github.com/Coprimal/Dblore/releases/download/plugin-duckdb-v1.5.6/libduckdb.dylib"
         )), .invalidURL("duckdb")
     ),
     (
       json(
         entry(
           url:
-            "https://github.com.evil.io/dinhanhthi/Dblore/releases/download/plugin-duckdb-v1.5.6/libduckdb.dylib"
+            "https://github.com.evil.io/Coprimal/Dblore/releases/download/plugin-duckdb-v1.5.6/libduckdb.dylib"
         )), .invalidURL("duckdb")
     ),
     (
       json(
         entry(
           url:
-            "https://evil.io@github.com/dinhanhthi/Dblore/releases/download/plugin-duckdb-v1.5.6/libduckdb.dylib"
+            "https://evil.io@github.com/Coprimal/Dblore/releases/download/plugin-duckdb-v1.5.6/libduckdb.dylib"
         )), .invalidURL("duckdb")
     ),
     (
       json(
         entry(
           url:
-            "https://github.com@evil.io/dinhanhthi/Dblore/releases/download/plugin-duckdb-v1.5.6/libduckdb.dylib"
+            "https://github.com@evil.io/Coprimal/Dblore/releases/download/plugin-duckdb-v1.5.6/libduckdb.dylib"
         )), .invalidURL("duckdb")
     ),
     (
       json(
         entry(
           url:
-            "https://github.com:8443/dinhanhthi/Dblore/releases/download/plugin-duckdb-v1.5.6/libduckdb.dylib"
+            "https://github.com:8443/Coprimal/Dblore/releases/download/plugin-duckdb-v1.5.6/libduckdb.dylib"
         )), .invalidURL("duckdb")
     ),
     (
@@ -219,7 +219,7 @@ import Testing
     (
       json(
         entry(
-          url: "https://github.com/dinhanhthi/Dblore/archive/plugin-duckdb-v1.5.6/libduckdb.dylib")),
+          url: "https://github.com/Coprimal/Dblore/archive/plugin-duckdb-v1.5.6/libduckdb.dylib")),
       .invalidURL("duckdb")
     ),
     (json(url("plugin-other-v1.5.6/libduckdb.dylib")), .invalidURL("duckdb")),

@@ -77,7 +77,7 @@ the preflight only):
    push triggers `pages.yml` (nothing is dispatched).
 
 A failure before step 6 publishes nothing. The feed keeps the latest 3 versions
-(the `generate_appcast` default) at <https://dinhanhthi.github.io/Dblore/appcast.xml>.
+(the `generate_appcast` default) at <https://dblore.coprimal.dev/appcast.xml>.
 
 ## Prerequisites
 
@@ -100,9 +100,9 @@ On GitHub and in the repo:
 
 - A **public** repo: Sparkle and users cannot download release assets from a
   private one. The skill stops unless
-  `gh api repos/dinhanhthi/Dblore --jq .visibility` prints `public`.
+  `gh api repos/Coprimal/Dblore --jq .visibility` prints `public`.
 - GitHub Pages with Source = **GitHub Actions**
-  (`gh api repos/dinhanhthi/Dblore/pages --jq .build_type` prints
+  (`gh api repos/Coprimal/Dblore/pages --jq .build_type` prints
   `workflow`). The skill stops otherwise.
 - A `CHANGELOG.md` at the repo root with a title and format note; the skill
   inserts each new version below it.

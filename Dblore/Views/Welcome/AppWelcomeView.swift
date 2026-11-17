@@ -536,8 +536,8 @@ struct WelcomeSidebar: View {
   @Environment(\.openURL) private var openURL
   @Environment(\.colorScheme) private var colorScheme
 
-  private static let repositoryURL = URL(string: "https://github.com/dinhanhthi/Dblore")!
-  private static let issuesURL = URL(string: "https://github.com/dinhanhthi/Dblore/issues")!
+  private static let repositoryURL = URL(string: "https://github.com/Coprimal/Dblore")!
+  private static let issuesURL = URL(string: "https://github.com/Coprimal/Dblore/issues")!
 
   private var appVersion: String {
     Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
@@ -590,7 +590,7 @@ struct WelcomeSidebar: View {
             .resizable()
             .frame(width: 14, height: 14)
         }
-        .help("GitHub Repository (github.com/dinhanhthi/Dblore)")
+        .help("GitHub Repository (github.com/Coprimal/Dblore)")
 
         Button {
           openURL(Self.issuesURL)

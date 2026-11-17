@@ -97,7 +97,7 @@ EXCLUDED_SCOPE_RE='^[0-9a-f]+ [a-z]+\((website|landing|docs)\)!?:'
 REPO_URL="$(git remote get-url origin 2>/dev/null \
   | sed 's|git@github.com:|https://github.com/|' \
   | sed 's|\.git$||' || true)"
-[[ -z "$REPO_URL" ]] && REPO_URL="https://github.com/dinhanhthi/Dblore"
+[[ -z "$REPO_URL" ]] && REPO_URL="https://github.com/Coprimal/Dblore"
 
 # ─── Latest published tag ─────────────────────────────────────────────────────
 #

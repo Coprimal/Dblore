@@ -18,7 +18,7 @@
 
 set -euo pipefail
 
-REPO="dinhanhthi/Dblore"
+REPO="Coprimal/Dblore"
 DUCKDB_VERSION="1.5.6"
 ASSET_URL="https://github.com/duckdb/duckdb/releases/download/v$DUCKDB_VERSION/libduckdb-osx-universal.zip"
 UPSTREAM_SHA256="e0bc007d9b0094c0970ac1847a8601d10aad07cbd2910ce586ec810f77b638d6"

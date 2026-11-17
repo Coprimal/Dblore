@@ -23,7 +23,7 @@ struct PluginManagerTests {
       id: "duckdb", version: "1.5.6",
       url: URL(
         string:
-          "https://github.com/dinhanhthi/Dblore/releases/download/plugin-duckdb-v1.5.6/libduckdb.dylib"
+          "https://github.com/Coprimal/Dblore/releases/download/plugin-duckdb-v1.5.6/libduckdb.dylib"
       )!,
       sha256: sha256, maxSize: maxSize, kind: .library(fileName: "libduckdb.dylib"))
   }
@@ -375,7 +375,7 @@ struct PluginManagerTests {
       id: "fake-plugin", version: "0.1",
       url: URL(
         string:
-          "https://github.com/dinhanhthi/Dblore/releases/download/plugin-fake-plugin-v0.1/libfake.dylib"
+          "https://github.com/Coprimal/Dblore/releases/download/plugin-fake-plugin-v0.1/libfake.dylib"
       )!,
       sha256: hex(fakePayload), maxSize: 1024, kind: .library(fileName: "libfake.dylib"))
   }
@@ -489,7 +489,7 @@ struct PluginManagerTests {
       id: "test-bundle", version: "1.0.0",
       url: URL(
         string:
-          "https://github.com/dinhanhthi/Dblore/releases/download/plugin-test-bundle-v1.0.0/X.zip"
+          "https://github.com/Coprimal/Dblore/releases/download/plugin-test-bundle-v1.0.0/X.zip"
       )!,
       sha256: hex(zip), maxSize: 1 << 20,
       kind: .bundle(

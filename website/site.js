@@ -60,7 +60,7 @@
     }
     if (!best) return;
     badge.textContent = `v${best.short}`;
-    badge.href = `https://github.com/dinhanhthi/Dblore/releases/tag/v${best.short}`;
+    badge.href = `https://github.com/Coprimal/Dblore/releases/tag/v${best.short}`;
   } catch {
     // Offline or no appcast (local preview): keep the static version.
   }

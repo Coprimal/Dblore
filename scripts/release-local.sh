@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-REPO="dinhanhthi/Dblore"
+REPO="Coprimal/Dblore"
 SCHEME="Dblore"
 PROJECT="Dblore.xcodeproj"
 TEAM_ID="86H6CNLN4C"
@@ -289,4 +289,4 @@ git push origin main ||
 
 echo "==> Done"
 echo "release: $(gh release view "$TAG" --json url -q .url)"
-echo "feed:    https://dinhanhthi.github.io/Dblore/appcast.xml"
+echo "feed:    https://dblore.coprimal.dev/appcast.xml"

@@ -105,7 +105,7 @@ test('issue links encode the feature title and use templates for visitor-friendl
   const { featureIssueURL } = loadPageLogic();
   const title = 'Copy SQL & "quoted" values + café';
   const url = new URL(featureIssueURL(title));
-  assert.equal(url.origin + url.pathname, 'https://github.com/dinhanhthi/Dblore/issues/new');
+  assert.equal(url.origin + url.pathname, 'https://github.com/Coprimal/Dblore/issues/new');
   assert.equal(url.searchParams.get('title'), `Bug: ${title}`);
   assert.equal(url.searchParams.get('template'), 'bug_report.md');
   assert.equal(url.searchParams.has('labels'), false);

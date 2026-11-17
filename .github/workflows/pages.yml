@@ -1,7 +1,7 @@
 name: Deploy website
 
 # Publishes the landing site (website/) AND appcast.xml to GitHub Pages
-# (https://dinhanhthi.github.io/Dblore/, appcast at /appcast.xml).
+# (https://dblore.coprimal.dev/, appcast at /appcast.xml).
 # Both are staged together because each Pages deploy replaces the whole site: deploying only one
 # would delete the other (the app's SUFeedURL points at /appcast.xml).
 # Nothing else in the repo is published.

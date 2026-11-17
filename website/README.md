@@ -1,6 +1,6 @@
 # Dblore website
 
-Static site (HTML + CSS + a little vanilla JS, no build step) for https://dblore.dinhanhthi.com.
+Static site (HTML + CSS + a little vanilla JS, no build step) for https://dblore.coprimal.dev.
 
 ## Preview
 
@@ -36,5 +36,5 @@ Open http://localhost:8080.
 One-time setup:
 
 1. Settings > Pages > Source = "GitHub Actions".
-2. DNS: add a `CNAME` record `dblore` pointing to `dinhanhthi.github.io`.
-3. Settings > Pages: set the custom domain to `dblore.dinhanhthi.com` and enable "Enforce HTTPS".
+2. DNS: add a `CNAME` record `dblore` pointing to `coprimal.github.io`.
+3. Settings > Pages: set the custom domain to `dblore.coprimal.dev` and enable "Enforce HTTPS".

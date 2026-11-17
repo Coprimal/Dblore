@@ -2,6 +2,17 @@
 
 All notable user-visible changes to Dblore, newest first. Each release is a section headed `## vX.Y.Z (YYYY-MM-DD)` with `### Security`, `### Added`, `### Improved`, `### Fixed` and `### Upgrade notes` subsections (empty ones omitted); every entry ends with links to its commits. Sections are written by `/cf-ship`, and the release workflow publishes the matching section as the GitHub Release notes.
 
+## v0.10.2 (2026-11-17)
+
+### Improved
+
+- **New home.** Dblore now lives at [github.com/Coprimal/Dblore](https://github.com/Coprimal/Dblore) and [dblore.coprimal.dev](https://dblore.coprimal.dev); the old repository and website addresses redirect there. About (now credited to Coprimal), the welcome window, Settings > Plugins and the website link to the new repository, and plugins download from its releases. [#4ec8de09](https://github.com/Coprimal/Dblore/commit/4ec8de09)
+- **Updates.** Dblore checks for updates at `dblore.coprimal.dev/appcast.xml`. Updates stay signed with the same key. [#42a984ca](https://github.com/Coprimal/Dblore/commit/42a984ca)
+
+### Upgrade notes
+
+- **Older versions.** Dblore 0.10.1 and older keep finding updates at the old feed address, which now carries a copy of the new feed; install this version so Dblore reads the feed at its new address.
+
 ## v0.10.1 (2026-11-13)
 
 ### Added

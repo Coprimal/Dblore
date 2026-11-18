@@ -190,8 +190,8 @@ struct SQLStatementStreamTests {
   }
 
   @Test(
-    "NUL is refused on SQLite and DuckDB only",
-    arguments: [(DatabaseType.sqlite, true), (.duckdb, true), (.postgresql, false)])
+    "NUL is refused on SQLite, DuckDB and PostgreSQL only",
+    arguments: [(DatabaseType.sqlite, true), (.duckdb, true), (.postgresql, true), (.mysql, false)])
   func nul(engine: DatabaseType, refused: Bool) throws {
     let url = try Self.file(Array("SELECT 1;\nSELECT 'a\0b';\n".utf8))
     defer { try? FileManager.default.removeItem(at: url) }

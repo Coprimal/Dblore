@@ -390,9 +390,9 @@ nonisolated struct SQLRestorePlan: Sendable {
   }
 
   /// - Throws: `SQLRestoreError` (too large, header missing or another engine, a NUL in a
-  ///   SQLite or DuckDB script, the first statement a dump never writes, or a DROP of an object
-  ///   the script does not create after it); `CancellationError` when the task planning it is
-  ///   cancelled
+  ///   SQLite, DuckDB or PostgreSQL script, the first statement a dump never writes, or a DROP
+  ///   of an object the script does not create after it); `CancellationError` when the task
+  ///   planning it is cancelled
   /// `script` is consumed: a caller that hands over its only copy (`consume`) has it freed
   /// before the split. `progress` gets the statements checked, every 4,096 and at the end.
   init(
@@ -418,8 +418,9 @@ nonisolated struct SQLRestorePlan: Sendable {
       scalars.reserveCapacity(bytes)
       scalars.append(contentsOf: script.unicodeScalars.dropFirst(sandbox))
       _ = consume script
-      // Both read statements as C strings: a NUL would cut the statement the whitelist approved
-      if engine == .sqlite || engine == .duckdb, scalars.contains("\0") {
+      // All three end statement text at a NUL: it would cut the statement the whitelist
+      // approved. MySQL frames the text by length and passes.
+      if engine == .sqlite || engine == .duckdb || engine == .postgresql, scalars.contains("\0") {
         throw SQLRestoreError.containsNUL
       }
       pieces = SQLTokenizer(dialect: dialect).splitStatements(scalars: scalars)

@@ -62,6 +62,7 @@ nonisolated struct WorkspaceHistoryEntry: Codable, Identifiable, Equatable, Send
     tabCount = try container.decode(Int.self, forKey: .tabCount)
     bookmark = try container.decodeIfPresent(Data.self, forKey: .bookmark)
     folderBookmark = try container.decodeIfPresent(Data.self, forKey: .folderBookmark)
+    iconColorName = try container.decodeIfPresent(String.self, forKey: .iconColorName)
     isLocked = try container.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
   }
 

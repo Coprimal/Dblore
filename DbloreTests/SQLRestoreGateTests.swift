@@ -891,6 +891,14 @@ struct SQLRestoreGateTests {
         == .containsNUL)
   }
 
+  @Test("A PostgreSQL script with a NUL character is refused (PostgreSQL would cut the text there)")
+  func postgresNULRefused() {
+    #expect(
+      Self.planError(
+        Self.header(.postgresql) + "\nINSERT INTO \"public\".\"e\" (\"x\") VALUES ('x\u{0}');",
+        .postgresql) == .containsNUL)
+  }
+
   // MARK: - DROP (version 2)
 
   private static let postgresDropDump = [

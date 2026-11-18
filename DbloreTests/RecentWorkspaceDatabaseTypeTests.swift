@@ -29,6 +29,7 @@ struct RecentWorkspaceDatabaseTypeTests {
       """
     let entry = try JSONDecoder().decode(WorkspaceHistoryEntry.self, from: Data(json.utf8))
     #expect(entry.databaseType == nil)
+    #expect(entry.iconColor == nil)
   }
 
   @Test("The database type round-trips and survives an edit")
@@ -41,5 +42,14 @@ struct RecentWorkspaceDatabaseTypeTests {
     let edited = entry.edited(
       name: "B", fileURL: URL(fileURLWithPath: "/tmp/b.sqlws"), bookmark: nil)
     #expect(edited.databaseType == .mongodb)
+  }
+
+  @Test("The folder icon color round-trips through JSON")
+  func iconColorRoundTrips() throws {
+    var entry = WorkspaceHistoryEntry(fileURL: URL(fileURLWithPath: "/tmp/a.sqlws"), name: "A")
+    entry.iconColor = .orange
+    let decoded = try JSONDecoder().decode(
+      WorkspaceHistoryEntry.self, from: JSONEncoder().encode(entry))
+    #expect(decoded.iconColor == .orange)
   }
 }

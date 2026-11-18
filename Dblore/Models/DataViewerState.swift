@@ -395,11 +395,10 @@ extension DataViewerState {
     var list = ["*"]
     if let lazyColumns {
       // SQLite reads a double-quoted name that matches no column (a stale cache's) as a string
-      // literal: a cut text column is named through its table, so it fails instead
+      // literal: a cut column is named through its table, so it fails instead
       func source(_ column: LazyColumn) -> String {
         let name = quotedIdentifier(column.name)
-        return databaseType == .sqlite && column.prefix == .characters
-          ? "\(relation).\(name)" : name
+        return databaseType == .sqlite ? "\(relation).\(name)" : name
       }
       let columns = lazyColumns.map { column in
         let name = quotedIdentifier(column.name)

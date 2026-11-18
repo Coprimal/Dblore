@@ -206,13 +206,17 @@ struct DataViewerStateTests {
   @Test("A lazy SQLite page cuts only blob values")
   func lazySQLite() {
     let viewer = lazy(.sqlite, schema: "main", binaryType: "BLOB")
+    // Named through the table: a stale name fails instead of reading as a string literal
+    let photo = #""main"."users"."photo""#
     #expect(
       viewer.pageSQL
-        == #"SELECT "id", CASE WHEN typeof("photo") = 'blob' THEN substr("photo", 1, 65536) "#
-        + #"ELSE "photo" END AS "photo", "name", CASE WHEN typeof("photo") = 'blob' THEN "#
-        + #"length("photo") END AS "dblore_byte_length_1" FROM "main"."users" ORDER BY "id" "#
-        + "LIMIT 100")
-    #expect(CellUpdateStatement.singleRelation(in: viewer.pageSQL, dialect: .sqlite) != nil)
+        == #"SELECT "id", CASE WHEN typeof("# + photo + #") = 'blob' THEN substr("# + photo
+        + #", 1, 65536) ELSE "# + photo + #" END AS "photo", "name", CASE WHEN typeof("#
+        + photo + #") = 'blob' THEN length("# + photo + #") END AS "dblore_byte_length_1" "#
+        + #"FROM "main"."users" ORDER BY "id" LIMIT 100"#)
+    #expect(
+      CellUpdateStatement.singleRelation(in: viewer.pageSQL, dialect: .sqlite)
+        == #""main"."users""#)
   }
 
   @Test("A SQLite column whose loaded values were blobs is cut whatever its declared type")

@@ -102,9 +102,9 @@ nonisolated struct SQLStatementStream {
   }
 
   /// The next statement, nil after the last.
-  /// - Throws: `DatabaseBackupError.notUTF8`; `SQLRestoreError.containsNUL` (SQLite, DuckDB),
-  ///   `.statementTooLarge` or `.statementNotLocated`; `CancellationError`; the file's read
-  ///   error
+  /// - Throws: `DatabaseBackupError.notUTF8`; `SQLRestoreError.containsNUL` (SQLite, DuckDB,
+  ///   PostgreSQL), `.statementTooLarge` or `.statementNotLocated`; `CancellationError`; the
+  ///   file's read error
   mutating func next() throws -> Statement? {
     _ = try firstLine()
     while ready.isEmpty {
@@ -151,8 +151,11 @@ nonisolated struct SQLStatementStream {
       }
     }
     bufferBytes += end
-    // Both read statements as C strings: a NUL would cut the statement the whitelist approved
-    if engine == .sqlite || engine == .duckdb, buffer[first...].contains("\0") {
+    // All three end statement text at a NUL: it would cut the statement the whitelist approved.
+    // MySQL frames the text by length and passes.
+    if engine == .sqlite || engine == .duckdb || engine == .postgresql,
+      buffer[first...].contains("\0")
+    {
       throw SQLRestoreError.containsNUL
     }
     // The whole-file read (`String(data:encoding:)`) drops a byte order mark at the start

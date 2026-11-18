@@ -17,6 +17,14 @@ struct PostgresSentError: Error, @unchecked Sendable {
   let underlying: any Error
 }
 
+/// Statement text with a NUL (`PostgresSession.refuseNUL`). Not a `DatabaseError`: the
+/// manager's `queryFailure` adds the "Query failed" prefix once.
+nonisolated struct PostgresNULRefusal: LocalizedError, Equatable {
+  var errorDescription: String? {
+    "This statement contains a NUL character, which the database would cut off."
+  }
+}
+
 /// The direct TCP connect failed (refused, unreachable, timed out). Reads like the
 /// `connectionError` PostgresNIO raised when it opened the socket itself.
 nonisolated private struct PostgresTransportError: LocalizedError, @unchecked Sendable {
@@ -625,6 +633,13 @@ nonisolated final class PostgresSession: DatabaseSession, @unchecked Sendable {
 
   // MARK: - Statements
 
+  /// PostgresNIO writes statement text null-terminated: everything after a U+0000 would be cut
+  /// off, so `DELETE FROM t<NUL> WHERE id = 1` would run as `DELETE FROM t`. Fail closed.
+  static func refuseNUL(_ sql: String) throws {
+    guard sql.utf8.contains(0) else { return }
+    throw PostgresNULRefusal()
+  }
+
   func query(_ sql: String, binds: [SQLBindValue]) async throws -> SessionRowSource {
     let query = Self.postgresQuery(sql, binds: binds)
     let (stream, token) = try await sendTracked(sql) { connection in
@@ -718,7 +733,8 @@ nonisolated final class PostgresSession: DatabaseSession, @unchecked Sendable {
   private func runTracked<T: Sendable>(
     _ sql: String, _ body: @escaping @Sendable (PostgresConnection) async throws -> T
   ) async throws -> T {
-    try await runWatched {
+    try Self.refuseNUL(sql)
+    return try await runWatched {
       guard let connection = self.connection else { throw ConnectionClosedError() }
       let token = self.beginStatement(sql)
       defer { self.endStatement(token) }
@@ -731,7 +747,8 @@ nonisolated final class PostgresSession: DatabaseSession, @unchecked Sendable {
   private func sendTracked<T: Sendable>(
     _ sql: String, _ body: @escaping @Sendable (PostgresConnection) async throws -> T
   ) async throws -> (value: T, token: UInt64) {
-    try await runWatched {
+    try Self.refuseNUL(sql)
+    return try await runWatched {
       guard let connection = self.connection else { throw ConnectionClosedError() }
       let token = self.beginStatement(sql)
       do {

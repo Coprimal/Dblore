@@ -37,6 +37,7 @@ struct SettingsModal: View {
   @Environment(\.colorScheme) private var colorScheme
   @State private var isExportingLogs = false
   @State private var selectedTab: SettingsTab
+  @State private var shortcutsTab: SettingsModalKeyboardShortcutsSection.ShortcutsTab = .app
   @State private var searchQuery = ""
 
   init(
@@ -197,6 +198,7 @@ struct SettingsModal: View {
   /// Opens the entry's tab, then scrolls its card into view once the page has rendered.
   private func show(_ entry: SettingsSearchEntry, in tab: SettingsTab, proxy: ScrollViewProxy) {
     selectedTab = tab
+    if let subTab = entry.shortcutsTab { shortcutsTab = subTab }
     DispatchQueue.main.async {
       withAnimation { proxy.scrollTo(entry.card, anchor: .top) }
     }
@@ -246,7 +248,7 @@ struct SettingsModal: View {
     case .shortcuts:
       ShortcutsSettingsSection()
     case .keyboard:
-      SettingsModalKeyboardShortcutsSection()
+      SettingsModalKeyboardShortcutsSection(selectedTab: $shortcutsTab)
     }
   }
 
@@ -549,12 +551,13 @@ struct SettingsModalDeveloperSection: View {
 
 struct SettingsModalKeyboardShortcutsSection: View {
   /// Sub-tabs at the top of the page (rawValue = label)
-  private enum ShortcutsTab: String, CaseIterable {
+  enum ShortcutsTab: String, CaseIterable {
     case app = "App"
     case editor = "Editor"
   }
 
-  @State private var selectedTab: ShortcutsTab = .app
+  /// Owned by `SettingsModal`, so a search hit can open the sub-tab that shows its card.
+  @Binding var selectedTab: ShortcutsTab
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.lg) {

@@ -32,6 +32,17 @@ final class SQLEditorDocument: NSObject, ReferenceFileDocument, NSFilePresenter,
   /// Debounce timer for rapid file changes
   private(set) var changeDebounceTask: Task<Void, Never>?
 
+  /// The change check that waited for this app's rewrite, run again by `endOwnRewrite` (nil:
+  /// none)
+  private(set) var deferredCheckTask: Task<Void, Never>?
+
+  /// This app's rewrites of the file in flight (Lock Workspace, Remove Lock): a change check
+  /// waits for them
+  private var ownRewritesInFlight = 0
+
+  /// Whether a change check waited for this app's rewrite
+  private var isCheckDeferred = false
+
   /// Flag to ignore changes triggered by our own save operation
   private var isIgnoringChanges = false
 
@@ -131,6 +142,21 @@ final class SQLEditorDocument: NSObject, ReferenceFileDocument, NSFilePresenter,
     ownRewriteDate = modificationDateOnDisk()
   }
 
+  func beginOwnRewrite() {
+    ownRewritesInFlight += 1
+  }
+
+  func endOwnRewrite() {
+    guard ownRewritesInFlight > 0 else { return }
+    ownRewritesInFlight -= 1
+    guard ownRewritesInFlight == 0, isCheckDeferred else { return }
+    isCheckDeferred = false
+    // Against the date taken after the write: only a later change asks
+    deferredCheckTask = Task { @MainActor in
+      await self.handleExternalChange()
+    }
+  }
+
   /// After a Lock password change re-sealed the file without this document: its new date is
   /// taken as seen only when this document knew the date of the bytes re-sealed; a change it
   /// had not seen still asks, and Keep My Version over it takes the rewrite as seen too
@@ -197,6 +223,11 @@ final class SQLEditorDocument: NSObject, ReferenceFileDocument, NSFilePresenter,
   /// Handle external file modification
   @MainActor
   private func handleExternalChange() async {
+    // This app is rewriting the file: checked again once the rewrite took its new date
+    guard ownRewritesInFlight == 0 else {
+      isCheckDeferred = true
+      return
+    }
     guard let url = _presentedItemURL else { return }
 
     // Check if file still exists

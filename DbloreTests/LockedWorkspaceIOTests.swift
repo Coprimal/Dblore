@@ -857,11 +857,6 @@ struct LockedWorkspaceIOTests {
     }
     #expect(documents.count == files.count - 1)
     #expect(SQLiteFileAccess.onPresenterQueue {})
-    /// The document's last debounced check of its file (nil: none started)
-    func check(of document: any FileConflictPresenting) -> Task<Void, Never>? {
-      (document as? DbloreDocument)?.changeDebounceTask
-        ?? (document as? SQLEditorDocument)?.changeDebounceTask
-    }
     for document in documents {
       if let pending = check(of: document) {
         await boundedWait("Earlier check") { await pending.value }
@@ -900,6 +895,82 @@ struct LockedWorkspaceIOTests {
     try await reportChanges("Another writer")
     #expect(manager.editorDocument(for: script.id)?.fileConflictState.showDialog == true)
     manager.releaseFileAccess()
+  }
+
+  /// The document's last debounced check of its file (nil: none started)
+  @MainActor private func check(of document: any FileConflictPresenting) -> Task<Void, Never>? {
+    (document as? DbloreDocument)?.changeDebounceTask
+      ?? (document as? SQLEditorDocument)?.changeDebounceTask
+  }
+
+  /// The document's check that waited for this app's rewrite (nil: none)
+  @MainActor private func deferredCheck(
+    of document: any FileConflictPresenting
+  ) -> Task<Void, Never>? {
+    (document as? DbloreDocument)?.deferredCheckTask
+      ?? (document as? SQLEditorDocument)?.deferredCheckTask
+  }
+
+  /// Tells the document its file changed, as the file coordinator does after a write; returns
+  /// once its debounced check ran
+  @MainActor private func reportChange(
+    to document: any FileConflictPresenting, _ step: String
+  ) async throws {
+    (document as? any NSFilePresenter)?.presentedItemDidChange?()
+    let pending = try #require(check(of: document))
+    await boundedWait("\(step) check") { await pending.value }
+    #expect(check(of: document) == pending, "\(step) check replaced")
+  }
+
+  /// Writes `text` to the file dated `date`
+  private func write(_ text: String, to url: URL, dated date: Date) throws {
+    try Data(text.utf8).write(to: url)
+    try FileManager.default.setAttributes([.modificationDate: date], ofItemAtPath: url.path)
+  }
+
+  @Test(
+    "A change check while this app rewrites the file waits for it; a later change still asks",
+    arguments: [LockEnvelope.Kind.notebook, .script])
+  @MainActor
+  func checkDuringOwnRewriteWaits(kind: LockEnvelope.Kind) async throws {
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let url = directory.appendingPathComponent(kind == .notebook ? "book.dblore" : "query.sql")
+    try write("SELECT 1;", to: url, dated: Date().addingTimeInterval(-60))
+    // Unregistered, so only the test tells the document its file changed
+    let document: any FileConflictPresenting
+    if kind == .notebook {
+      let book = DbloreDocument(notebook: DbloreNotebook(cells: []))
+      book.setFileURL(url)
+      SQLiteFileAccess.removeFilePresenter(book)
+      document = book
+    } else {
+      let script = SQLEditorDocument(content: "")
+      script.setFileURL(url)
+      SQLiteFileAccess.removeFilePresenter(script)
+      document = script
+    }
+    #expect(SQLiteFileAccess.onPresenterQueue {})
+    if let pending = check(of: document) {
+      await boundedWait("Earlier check") { await pending.value }
+    }
+
+    // In rewriteTabFile's order: the bytes land, and the check runs, before the date update
+    document.beginOwnRewrite()
+    try write("SELECT 2;", to: url, dated: Date())
+    try await reportChange(to: document, "Own rewrite")
+    try #require(
+      !document.fileConflictState.showDialog, "conflict shown while the rewrite is in flight")
+    document.updateLastKnownModificationDate()
+    document.endOwnRewrite()
+    if let deferred = deferredCheck(of: document) {
+      await boundedWait("Deferred check") { await deferred.value }
+    }
+    #expect(!document.fileConflictState.showDialog, "conflict shown after the rewrite ended")
+
+    // Another writer's later change still asks
+    try write("SELECT 3;", to: url, dated: Date().addingTimeInterval(60))
+    try await reportChange(to: document, "Another writer")
+    #expect(document.fileConflictState.showDialog, "a later outside change raised no conflict")
   }
 
   @Test(

@@ -12,6 +12,8 @@ struct SettingsSearchEntry: Hashable {
   let card: String
   let title: String
   var detail: String = ""
+  /// Keyboard page sub-tab that shows this entry's card. Nil on the other pages.
+  var shortcutsTab: SettingsModalKeyboardShortcutsSection.ShortcutsTab? = nil
 }
 
 /// A tab kept by the settings search.
@@ -399,12 +401,13 @@ extension SettingsModal.SettingsTab {
         ),
       ]
     case .keyboard:
-      let groups =
-        SettingsModalKeyboardShortcutsSection.appGroups
-        + SettingsModalKeyboardShortcutsSection.editorGroups
-      return groups.flatMap { group in
+      typealias Section = SettingsModalKeyboardShortcutsSection
+      let groups: [(Section.ShortcutGroup, Section.ShortcutsTab)] =
+        Section.appGroups.map { ($0, .app) } + Section.editorGroups.map { ($0, .editor) }
+      return groups.flatMap { group, subTab in
         group.rows.map {
-          SettingsSearchEntry(card: group.title, title: $0.action, detail: $0.shortcut)
+          SettingsSearchEntry(
+            card: group.title, title: $0.action, detail: $0.shortcut, shortcutsTab: subTab)
         }
       }
     }

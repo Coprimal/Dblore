@@ -3202,6 +3202,9 @@ extension WorkspaceManager {
     let documents = tabs.filter { $0.fileURL == file.url }
       .compactMap { fileDocument(for: $0.id) }
     let upToDate = documents.map { $0.unseenChangeDate() == nil }
+    // A change check during the write waits for the new date below (on throw too)
+    for document in documents { document.beginOwnRewrite() }
+    defer { for document in documents { document.endOwnRewrite() } }
     try await lockedIO.rewrite(file.url, kind: file.kind, sealingWith: session)
     for (document, upToDate) in zip(documents, upToDate) {
       if upToDate {

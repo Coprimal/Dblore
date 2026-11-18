@@ -43,4 +43,15 @@ struct SettingsSearchTests {
     #expect(titles(Tab.search("template placeholder"), in: .ai).first == "Custom slash commands")
   }
 
+  @Test("a keyboard hit opens the sub-tab that shows its row")
+  func keyboardHitCarriesSubTab() throws {
+    func hit(_ query: String, _ title: String) -> SettingsSearchEntry? {
+      Tab.search(query).first { $0.tab == .keyboard }?.entries.first { $0.title == title }
+    }
+    let editorHit = try #require(hit("toggle word wrap", "Toggle Word Wrap"))
+    let appHit = try #require(hit("new sql file", "New SQL File / New Query"))
+    #expect(editorHit.shortcutsTab == .editor)
+    #expect(appHit.shortcutsTab == .app)
+  }
+
 }

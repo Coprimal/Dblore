@@ -77,6 +77,12 @@ protocol FileConflictPresenting: ObservableObject {
   /// After a Lock password change re-sealed the file: takes its new date as seen only when the
   /// document knew the date of the bytes re-sealed
   func noteRewrite(_ file: LockedFileIO.RewrittenFile)
+  /// Before this app rewrites the file (Lock Workspace, Remove Lock): a change check that runs
+  /// until `endOwnRewrite` waits for it
+  func beginOwnRewrite()
+  /// After the rewrite and its date update: a check that waited runs again, so a later change
+  /// made by another writer still asks
+  func endOwnRewrite()
 }
 
 /// The file conflict alert of a document's tab. Observes the document, so the alert shows as

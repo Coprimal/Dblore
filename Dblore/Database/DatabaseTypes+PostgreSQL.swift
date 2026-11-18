@@ -63,17 +63,32 @@ extension ColumnInfo {
 // MARK: - PostgreSQL Type Mapping & Parsing
 
 extension DatabaseConnectionManager {
-  /// Extension types the Cell Value viewers read, found by name and owned by an extension:
-  /// their OIDs differ from one database to the next, so they are never hardcoded. Sent at
-  /// session open with the user's search_path, so every catalog object names pg_catalog.
+  /// Extension types the Cell Value viewers read or decode, found by name and owned by an
+  /// extension: their OIDs differ from one database to the next, so they are never hardcoded.
+  /// The array types of citext, hstore, ltree, lquery and ltxtquery are not extension-owned
+  /// themselves: they are found through their element (`typelem`) and named `<element>[]`.
+  /// Sent at session open with the user's search_path, so every catalog object names pg_catalog.
   nonisolated static let viewerExtensionTypesSQL = """
     SELECT t.oid::pg_catalog.int8, t.typname::pg_catalog.text FROM pg_catalog.pg_type t
     WHERE t.typname OPERATOR(pg_catalog.=) ANY (ARRAY['geometry', 'geography', 'vector',
-        'halfvec', 'sparsevec']::pg_catalog.name[])
+        'halfvec', 'sparsevec', 'citext', 'hstore', 'ltree', 'lquery',
+        'ltxtquery']::pg_catalog.name[])
       AND EXISTS (
         SELECT 1 FROM pg_catalog.pg_depend d
         WHERE d.classid OPERATOR(pg_catalog.=) 'pg_catalog.pg_type'::pg_catalog.regclass
           AND d.objid OPERATOR(pg_catalog.=) t.oid AND d.deptype OPERATOR(pg_catalog.=) 'e')
+    UNION ALL
+    SELECT a.oid::pg_catalog.int8,
+      e.typname::pg_catalog.text OPERATOR(pg_catalog.||) '[]'
+    FROM pg_catalog.pg_type a
+    JOIN pg_catalog.pg_type e ON e.oid OPERATOR(pg_catalog.=) a.typelem
+    WHERE a.typtype OPERATOR(pg_catalog.=) 'b' AND a.typcategory OPERATOR(pg_catalog.=) 'A'
+      AND e.typname OPERATOR(pg_catalog.=) ANY (ARRAY['citext', 'hstore', 'ltree', 'lquery',
+        'ltxtquery']::pg_catalog.name[])
+      AND EXISTS (
+        SELECT 1 FROM pg_catalog.pg_depend d
+        WHERE d.classid OPERATOR(pg_catalog.=) 'pg_catalog.pg_type'::pg_catalog.regclass
+          AND d.objid OPERATOR(pg_catalog.=) e.oid AND d.deptype OPERATOR(pg_catalog.=) 'e')
     """
 
   /// Map PostgreSQL data type to display name. `extensionTypes` names extension types by OID
@@ -315,6 +330,15 @@ extension DatabaseConnectionManager {
       if let value = arrayLiteral(cell, String.self, quoteArrayElement) { return value }
 
     default:
+      // ltree, lquery, ltxtquery, hstore, citext and their 1-D arrays arrive as their send
+      // bytes: decoded to the server's text, which an edit or a row key binds back unchanged.
+      // Always a string, never `.json`: `{a,b}` is an array. Undecodable bytes fall through.
+      if cell.format == .binary, let name = extensionTypes[cell.dataType.rawValue],
+        let text = PostgresExtensionValues.text(typeName: name, bytes: bytes)
+      {
+        return .string(text)
+      }
+
       // geometry_send / geography_send write EWKB, which the Cell Value viewer reads.
       // halfvec / sparsevec binary is not the float32 layout below: decoded to their text
       // form, or else kept as bytes, never misread as a vector.

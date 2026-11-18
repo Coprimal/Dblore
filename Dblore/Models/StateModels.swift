@@ -15,8 +15,10 @@ struct ToastState: Equatable, Sendable {
   var currentToast: ToastMessage?
   var isHovered: Bool = false
 
-  mutating func show(_ message: String, type: ToastMessage.ToastType = .info) {
-    currentToast = ToastMessage(message: message, type: type)
+  mutating func show(
+    _ message: String, type: ToastMessage.ToastType = .info, workspace: UUID? = nil
+  ) {
+    currentToast = ToastMessage(message: message, type: type, workspaceID: workspace)
   }
 
   mutating func dismiss() {

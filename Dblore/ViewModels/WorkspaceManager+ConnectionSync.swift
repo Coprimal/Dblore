@@ -799,7 +799,7 @@ extension WorkspaceManager {
   private func showAttachWarnings() async {
     let warnings = await connectionManager.attachWarnings
     guard !warnings.isEmpty else { return }
-    WorkspaceWindowManager.shared.showToast(warnings.joined(separator: "\n"), type: .warning)
+    showToast(warnings.joined(separator: "\n"), type: .warning)
   }
 
   /// `config` once its blocked lock is unlocked, with its saved password when it uses one, has

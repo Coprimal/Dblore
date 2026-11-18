@@ -108,7 +108,7 @@ extension WorkspaceManager {
             let failure = await self.connectSwitched(
               config, certificate: certificate, sshCredential: sshCredential)
           else { return }
-          WorkspaceWindowManager.shared.showToast(
+          self.showToast(
             "Switch database failed: \(failure)", type: .error)
         }
       }

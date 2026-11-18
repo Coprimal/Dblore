@@ -30,9 +30,12 @@ class WorkspaceWindowManager {
   var toastState: ToastState = ToastState()
   private var toastDismissTask: Task<Void, Never>?
 
-  /// Show a toast notification at app level
-  func showToast(_ message: String, type: ToastMessage.ToastType = .info) {
-    toastState.show(message, type: type)
+  /// Show a toast notification; `workspace` limits it to that workspace's window, nil shows it
+  /// in every window
+  func showToast(
+    _ message: String, type: ToastMessage.ToastType = .info, workspace: UUID? = nil
+  ) {
+    toastState.show(message, type: type, workspace: workspace)
     startToastDismissTimer()
   }
 

@@ -116,7 +116,7 @@ extension WorkspaceManager {
       sql = try DuckDBFileQuery.sql(
         path: path, function: DuckDBFileQuery.readFunction(forExtension: url.pathExtension))
     } catch {
-      WorkspaceWindowManager.shared.showToast(error.localizedDescription, type: .error)
+      showToast(error.localizedDescription, type: .error)
       return nil
     }
     let granted = connectionState.isConnected && duckDBFileAccess[path] != nil
@@ -140,7 +140,7 @@ extension WorkspaceManager {
     guard let config = duckDBFileQueryConfig, config.database == database,
       !connectionState.isConnecting, connectionState.isConnected == wasConnected
     else {
-      WorkspaceWindowManager.shared.showToast(
+      showToast(
         "The connection changed while choosing the file: query the file again", type: .warning)
       return nil
     }
@@ -155,7 +155,7 @@ extension WorkspaceManager {
     let wasConnected = connectionState.isConnected
     if wasConnected {
       guard !isAnyTabExecuting else {
-        WorkspaceWindowManager.shared.showToast(
+        showToast(
           "A query is running: wait for it to finish, then query the file again", type: .warning)
         return false
       }
@@ -174,13 +174,13 @@ extension WorkspaceManager {
       if case WorkspaceConnectError.pendingTransactionKept = error { return false }
       // The unlock of a locked file was cancelled: nothing to show
       if case WorkspaceConnectError.unlockRequired = error { return false }
-      WorkspaceWindowManager.shared.showToast(
+      showToast(
         "DuckDB could not open the file: \(error.localizedDescription)", type: .error)
       presentConnectErrorIfActionable(error, config: config)
       return false
     }
     if wasConnected, !inMemory, !config.readOnlyFile {
-      WorkspaceWindowManager.shared.showToast(
+      showToast(
         "DuckDB reconnected to read \(url.lastPathComponent): temporary tables were discarded")
     }
     await settleReconnectLoads()

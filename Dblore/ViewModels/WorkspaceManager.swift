@@ -771,7 +771,7 @@ class WorkspaceManager: Identifiable {
         lockedIO.sessions.session(for: workspace.id) == nil
         ? "it is not saved until its encrypted files are unlocked."
         : "it is encrypted again when it is saved."
-      WorkspaceWindowManager.shared.showToast(
+      manager.showToast(
         "\(workspace.name) was locked, but its workspace file is not encrypted now. It stays "
           + "locked: \(next)", type: .warning)
     } else if workspace.connectionConfig != nil {
@@ -779,7 +779,7 @@ class WorkspaceManager: Identifiable {
       manager.connectionState = .connecting
       manager.autoConnectTask = Task { await manager.autoConnectIfNeeded() }
     } else if workspace.unsupportedConnection != nil {
-      WorkspaceWindowManager.shared.showToast(
+      manager.showToast(
         "This workspace uses a database engine this version of Dblore does not support. "
           + "Update Dblore to connect.", type: .warning)
     }
@@ -801,6 +801,22 @@ class WorkspaceManager: Identifiable {
     WorkspaceUnlockPrompt.unlock(reason: "open a file of a locked workspace") { [weak self] in
       self.flatMap { NewWindowStore.shared.findWindow(for: $0.id) }
     }
+  }
+
+  // MARK: - Toast
+
+  /// Show a toast tagged with this workspace while its window is on screen (visible, not
+  /// minimized and on the active Space), so it shows in that window only; otherwise (no window,
+  /// a background tab, a minimized window, a window on another Space or full-screen desktop) an
+  /// app-level toast, so the message is not lost. A window fully covered by another window still
+  /// counts as on screen. The other-Space case is checked by hand only (no test can move a window
+  /// to another Space)
+  func showToast(_ message: String, type: ToastMessage.ToastType = .info) {
+    let windows = WorkspaceWindowManager.shared
+    let onScreen = windows.findWorkspaceWindow(id).map {
+      $0.isVisible && !$0.isMiniaturized && $0.isOnActiveSpace
+    }
+    windows.showToast(message, type: type, workspace: onScreen == true ? id : nil)
   }
 
   // MARK: - Computed Properties
@@ -1222,7 +1238,7 @@ class WorkspaceManager: Identifiable {
       let message = SSHHostKeyTrustCoordinator.shared.report(error) { [weak self] in
         Task { await self?.connectReportingFailure(config) }
       }
-      WorkspaceWindowManager.shared.showToast("Connect failed: \(message)", type: .error)
+      showToast("Connect failed: \(message)", type: .error)
       presentConnectErrorIfActionable(error, config: config)
     }
   }
@@ -1563,7 +1579,7 @@ class WorkspaceManager: Identifiable {
       }
     }
     if !deniedFiles.isEmpty {
-      WorkspaceWindowManager.shared.showToast(
+      showToast(
         "No access to \(deniedFiles.joined(separator: ", ")): tab not restored", type: .warning)
     }
     return bookmarksChanged
@@ -1723,14 +1739,14 @@ class WorkspaceManager: Identifiable {
       let message = TabDocumentType.scriptKindRefusal(
         for: url, databaseType: workspace.connectionConfig?.databaseType)
     {
-      WorkspaceWindowManager.shared.showToast(message, type: .error)
+      showToast(message, type: .error)
       throw CocoaError(.fileReadUnsupportedScheme)
     }
     // On every path (reopen, move to a new window): a notebook runs SQL cells
     if let message = TabDocumentType.notebookRefusal(
       for: url, databaseType: workspace.connectionConfig?.databaseType)
     {
-      WorkspaceWindowManager.shared.showToast(message, type: .error)
+      showToast(message, type: .error)
       throw CocoaError(.fileReadUnsupportedScheme)
     }
 
@@ -1843,6 +1859,11 @@ class WorkspaceManager: Identifiable {
       guard let self else { return nil }
       return self.runningWork.stopConsent(workspaceID: self.id)
     }
+    // Its toasts show only in this workspace's window
+    viewModel.toastPresenter = { [weak self] message, type in
+      self?.showToast(message, type: type)
+        ?? WorkspaceWindowManager.shared.showToast(message, type: type)
+    }
     viewModel.isAIAllowed = { [weak self] in self?.isAIAllowed() ?? false }
     viewModel.aiInlineSchema = { [weak self] prefix in await self?.aiInlineSchema(prefix: prefix) }
     viewModel.connectGenerationForRun = { [weak self] in self?.connectGenerationForRun() }
@@ -1931,7 +1952,7 @@ class WorkspaceManager: Identifiable {
   /// A pinned tab stays open; the alert already went away, so say why nothing closed
   private func canCloseDeletedFileTab(id: UUID) -> Bool {
     guard canClose(tabId: id) else {
-      WorkspaceWindowManager.shared.showToast("Unpin the tab to close it")
+      showToast("Unpin the tab to close it")
       return false
     }
     return true
@@ -2833,7 +2854,7 @@ class WorkspaceManager: Identifiable {
 
   /// No edit model could be made or re-targeted: says why instead of dropping the click
   private func showSchemaDiagramEditRefusal() {
-    WorkspaceWindowManager.shared.showToast(
+    showToast(
       schemaDiagramEditDisabledReason ?? SchemaDiagramEditModel.notConnectedMessage,
       type: .warning)
   }

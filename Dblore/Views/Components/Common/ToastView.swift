@@ -10,6 +10,8 @@ struct ToastMessage: Identifiable, Equatable {
   let id = UUID()
   let message: String
   let type: ToastType
+  /// The workspace window that raised the toast; nil shows it in every window (app level)
+  var workspaceID: UUID?
 
   enum ToastType {
     case info

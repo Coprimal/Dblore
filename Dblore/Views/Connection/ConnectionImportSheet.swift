@@ -538,8 +538,11 @@ struct ConnectionImportSheet: View {
       } else {
         skippedFavorites = false
       }
-      WorkspaceWindowManager.shared.showToast(
-        message, type: report.failed.isEmpty && !skippedFavorites ? .success : .warning)
+      let type: ToastMessage.ToastType =
+        report.failed.isEmpty && !skippedFavorites ? .success : .warning
+      // In a workspace window, only there; from Welcome, app-level
+      workspaceManager?.showToast(message, type: type)
+        ?? WorkspaceWindowManager.shared.showToast(message, type: type)
     }
   }
 }

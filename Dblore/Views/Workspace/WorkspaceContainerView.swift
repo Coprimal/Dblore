@@ -341,6 +341,13 @@ struct WorkspaceContainerView: View {
   }
 
   var body: some View {
+    // Outermost, so every overlay of the window (sheets, side panels, the settings modal) shows
+    // only this workspace's toasts and the app-level ones
+    windowContent
+      .environment(\.toastWorkspaceID, workspaceManager.id)
+  }
+
+  private var windowContent: some View {
     // A ZStack, not a Group: a Group hands every modifier below to each branch, so a cover
     // change rebuilt the whole chain (the window reader lost its window, the close guard its
     // button, the sheets their state)

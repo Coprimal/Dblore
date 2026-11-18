@@ -756,6 +756,6 @@ extension WorkspaceManager {
   }
 
   private func showTransactionToast(_ message: String, type: ToastMessage.ToastType) {
-    WorkspaceWindowManager.shared.showToast(message, type: type)
+    showToast(message, type: type)
   }
 }

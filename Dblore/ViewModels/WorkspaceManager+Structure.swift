@@ -108,7 +108,10 @@ extension WorkspaceManager {
         self.applyTableChange(change)
       }
     }
-    model.toastPresenter = { WorkspaceWindowManager.shared.showToast($0, type: $1) }
+    model.toastPresenter = { [weak self] message, type in
+      self?.showToast(message, type: type)
+        ?? WorkspaceWindowManager.shared.showToast(message, type: type)
+    }
     return model
   }
 

@@ -47,11 +47,11 @@ extension WorkspaceManager {
     resolveHeldWrittenRelations(committed: !endedTransaction)
     switch event.reason {
     case .rowCap:
-      WorkspaceWindowManager.shared.showToast(
+      showToast(
         "Connection was reset to stop a large result — temp tables, SET and search_path were "
           + "lost.", type: .warning)
     case .cancelled(let pendingCount):
-      WorkspaceWindowManager.shared.showToast(
+      showToast(
         DatabaseError.cancelMessage(
           pendingCount: pendingCount, userTxRolledBack: event.userTxRolledBack),
         type: .warning)
@@ -127,7 +127,7 @@ extension WorkspaceManager {
           await self?.reconnect(config, certificate: certificate, sshCredential: sshCredential)
         }
       }
-      WorkspaceWindowManager.shared.showToast("Reconnect failed: \(message)", type: .error)
+      showToast("Reconnect failed: \(message)", type: .error)
     }
   }
 

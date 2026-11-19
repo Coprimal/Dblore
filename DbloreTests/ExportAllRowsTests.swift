@@ -1,10 +1,10 @@
 // ExportAllRowsTests.swift
 // The Export sheet's "All rows" source: offered for a partial editor or notebook result (row
 // cap, byte budget, cut cells) whose query is one read without `:name` parameters, and for every
-// SQL data viewer page (its `exportSQL`); refused with a reason otherwise. A result whose cells
-// cannot all be loaded opens the sheet at once: "Shown rows" is refused then, "All rows" runs the
-// read again on a separate connection (a SQLite file, no server) and writes every row, its masked
-// columns redacted.
+// data viewer page (its `exportSQL`), on an engine whose results export all rows; refused with a
+// reason otherwise. A result whose cells cannot all be loaded opens the sheet at once: "Shown
+// rows" is refused then, "All rows" runs the read again on a separate connection (a SQLite file,
+// no server) and writes every row, its masked columns redacted.
 
 import Foundation
 import Testing
@@ -108,6 +108,23 @@ struct ExportAllRowsTests {
     #expect(
       viewModel.allRowsExportOffer(for: page, cellId: nil)?.reason
         == NotebookViewModel.allRowsMongoDBReason)
+  }
+
+  @Test("ClickHouse and SQL Server: no all-rows offer for a page or a row-capped result")
+  func runnerRefusedEnginesOfferNoAllRows() {
+    for engine in [DatabaseType.clickhouse, .sqlserver] {
+      let reason = ResultExportError.unsupportedEngine(engine).errorDescription
+      let viewModel = editorViewModel(engine)
+      #expect(
+        viewModel.allRowsExportOffer(for: result("SELECT id, email FROM users"), cellId: nil)?
+          .reason == reason)
+      var viewer = DataViewerState(schema: "dbo", name: "users", orderColumns: ["id"], page: 1)
+      viewer.databaseType = engine
+      viewModel.dataViewer = viewer
+      #expect(
+        viewModel.allRowsExportOffer(
+          for: result(viewer.shownPageSQL, limited: false), cellId: nil)?.reason == reason)
+    }
   }
 
   @Test("Cut cells: Shown rows is refused, All rows writes every row with masked columns redacted")

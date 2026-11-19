@@ -119,9 +119,11 @@ extension WorkspaceManager {
         schema: schema, name: name, orderColumns: palettePrimaryKeyNames(schema: schema, name: name)
       )
       mongoOverview = nil  // The opened tab shows, not the overview screen
+      revealInSidebar(.init(schema: schema, name: name, kind: .table))
     case .view(let schema, let name):
       openDataViewer(schema: schema, name: name, orderColumns: [])
       mongoOverview = nil
+      revealInSidebar(.init(schema: schema, name: name, kind: .view))
     case .function(_, let name, _):
       guard canInsertPaletteText() else { return false }
       activeViewModel?.insertTextIntoSelectedCell(name)
@@ -147,6 +149,12 @@ extension WorkspaceManager {
       return performPaletteAction(id: id)
     }
     return true
+  }
+
+  /// Shows the left sidebar (persisted, as its toggle does) and asks it to reveal `request`
+  private func revealInSidebar(_ request: SidebarReveal) {
+    if !isLeftSidebarVisible { toggleLeftSidebar() }
+    sidebarReveal = request
   }
 
   /// "Query Parquet/CSV File..." only for a DuckDB workspace (connected or not). The MongoDB

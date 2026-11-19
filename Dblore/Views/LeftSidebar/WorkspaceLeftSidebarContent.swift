@@ -50,6 +50,8 @@ struct WorkspaceLeftSidebarContent: View {
   /// A Redis workspace's key browser: kept here, so a trip to Favorites or History keeps its
   /// listings and selection; reset on a disconnect
   @State private var redisKeys = RedisKeyBrowserModel()
+  /// The palette's reveal once its sections are open: what the Public list scrolls through
+  @State private var revealScroll: RevealScroll?
 
   enum SidebarTab: String, CaseIterable {
     case `public` = "Public"
@@ -115,6 +117,8 @@ struct WorkspaceLeftSidebarContent: View {
         redisKeys.reset()
       }
     }
+    // On appear too: a hidden sidebar is not mounted when the palette asks
+    .task(id: revealKey) { prepareReveal() }
     .sheet(item: $aggregationBuilder) { model in
       AggregationBuilderSheet(
         model: model, insertTarget: workspaceManager.activeViewModel,
@@ -763,6 +767,7 @@ struct WorkspaceLeftSidebarContent: View {
         }
       }
     )
+    .id(Self.folderScrollID(folder.id))
   }
 
   /// The Public tab's schemas, read once per render
@@ -874,56 +879,192 @@ struct WorkspaceLeftSidebarContent: View {
       } else if !publicKeywords.isEmpty && found.isListedEmpty && temporary.isEmpty {
         noMatchesState
       } else {
-        ScrollView {
-          LazyVStack(alignment: .leading, spacing: Spacing.sm) {
-            if !temporary.isEmpty {
-              temporarySection(temporary)
-            }
-            // Every schema hidden: the notice under Temporary. One schema keeps the flat
-            // layout; two or more get one group per schema
-            if schemaState.isEverySchemaHidden {
-              everySchemaHiddenState
-            } else if schemaState.schemaLoad.count > 1
-              && SidebarSectionModel.groupsBySchema(queryLanguage)
-            {
-              ForEach(schemas, id: \.self) { schema in
-                let inSchema = self.entities(in: schema, of: found)
-                if !inSchema.isEmpty {
-                  let grouped = foldered(
-                    inSchema, folders: index?.bySchema[schema] ?? [])
-                  EntitySection(
-                    title: schema, count: inSchema.count, icon: "folder",
-                    forceExpanded: isFilteringPublic,
-                    expanded: sectionExpansion("schema-group:" + schema, default: true)
-                  ) {
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                      entitySections(
-                        grouped.rest, folders: grouped.folders, folderIndex: index,
-                        idPrefix: "\(schema).", showsEmptySections: false, showsSchema: false,
-                        schema: schema)
-                    }
-                  }
-                  // The schema's menu: the database's, with Import Files into this schema
-                  .contextMenu { databaseMenuItems(schema: schema) }
-                }
-              }
-            } else {
-              let flat = foldered(
-                listedEntities(of: found), folders: index?.folders(in: Set(schemas)) ?? [])
-              entitySections(
-                flat.rest, folders: flat.folders, folderIndex: index, idPrefix: "",
-                showsEmptySections: publicKeywords.isEmpty,
-                showsSchema: connectionDatabaseType.namesSchema, schema: nil)
-            }
-          }
-          .padding(.vertical, Spacing.sm)
-          .frame(maxWidth: .infinity, alignment: .leading)
+        ScrollViewReader { proxy in
+          publicList(
+            found: found, temporary: temporary, schemaState: schemaState, index: index
+          )
+          .task(id: revealScroll) { scrollToReveal(with: proxy) }
         }
-        // The database's menu: section headers and empty space (rows keep their own menus)
-        .contextMenu { databaseMenuItems(schema: nil) }
       }
     }
     .task(id: filterKey) { await refilterPublic(filterKey) }
+  }
+
+  /// The Public tab's scrolling list
+  private func publicList(
+    found: PublicMatches, temporary: PublicEntities, schemaState: PublicSchemas,
+    index: FolderIndex?
+  ) -> some View {
+    let schemas = schemaState.listed
+    return ScrollView {
+      LazyVStack(alignment: .leading, spacing: Spacing.sm) {
+        if !temporary.isEmpty {
+          temporarySection(temporary)
+        }
+        // Every schema hidden: the notice under Temporary. One schema keeps the flat
+        // layout; two or more get one group per schema
+        if schemaState.isEverySchemaHidden {
+          everySchemaHiddenState
+        } else if schemaState.schemaLoad.count > 1
+          && SidebarSectionModel.groupsBySchema(queryLanguage)
+        {
+          ForEach(schemas, id: \.self) { schema in
+            let inSchema = self.entities(in: schema, of: found)
+            if !inSchema.isEmpty {
+              let grouped = foldered(
+                inSchema, folders: index?.bySchema[schema] ?? [])
+              EntitySection(
+                title: schema, count: inSchema.count, icon: "folder",
+                forceExpanded: isFilteringPublic,
+                expanded: sectionExpansion("schema-group:" + schema, default: true)
+              ) {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                  entitySections(
+                    grouped.rest, folders: grouped.folders, folderIndex: index,
+                    idPrefix: "\(schema).", showsEmptySections: false, showsSchema: false,
+                    schema: schema)
+                }
+              }
+              // The schema's menu: the database's, with Import Files into this schema
+              .contextMenu { databaseMenuItems(schema: schema) }
+              .id("schema-group:" + schema)
+            }
+          }
+        } else {
+          let flat = foldered(
+            listedEntities(of: found), folders: index?.folders(in: Set(schemas)) ?? [])
+          entitySections(
+            flat.rest, folders: flat.folders, folderIndex: index, idPrefix: "",
+            showsEmptySections: publicKeywords.isEmpty,
+            showsSchema: connectionDatabaseType.namesSchema, schema: nil)
+        }
+      }
+      .padding(.vertical, Spacing.sm)
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    // The database's menu: section headers and empty space (rows keep their own menus)
+    .contextMenu { databaseMenuItems(schema: nil) }
+  }
+
+  // MARK: - Reveal from the command palette
+
+  /// The palette's request and whether the first schema read is still running (it waits)
+  private struct RevealKey: Equatable {
+    let token: UUID
+    let waitsForSchema: Bool
+  }
+
+  private var revealKey: RevealKey? {
+    workspaceManager.sidebarReveal.map {
+      RevealKey(
+        token: $0.token,
+        waitsForSchema: workspaceManager.isLoadingSchema
+          && workspaceManager.schemaConnectionEpoch == nil)
+    }
+  }
+
+  /// What the Public list scrolls through for a reveal: its group, section or folder ids,
+  /// outermost first, then the row
+  private struct RevealScroll: Equatable {
+    let token: UUID
+    let containers: [String]
+    let row: UUID
+  }
+
+  private static func folderScrollID(_ id: UUID) -> String {
+    "folder:" + id.uuidString
+  }
+
+  /// Takes the palette's request: on the Public tab, opens the schema group, the section or
+  /// folder and hands the list the ids to scroll through. A row the tab does not list (filter
+  /// text, hidden schema, a partition under its parent) is left alone. Waits for a first schema
+  /// read; dropped while disconnected or on Redis.
+  private func prepareReveal() {
+    guard let request = workspaceManager.sidebarReveal, revealKey?.waitsForSchema == false
+    else { return }
+    workspaceManager.sidebarReveal = nil
+    guard workspaceManager.connectionState.isConnected, !workspaceManager.isRedisWorkspace,
+      let place = revealPlace(of: request)
+    else { return }
+    selectedTab = .public
+    for key in place.containers where !key.hasPrefix("folder:") {
+      expandedSections[key] = true
+    }
+    if let folder = place.folder { collapsedFolders.remove(folder) }
+    revealScroll = RevealScroll(token: request.token, containers: place.containers, row: place.row)
+  }
+
+  /// The ids holding `request`'s row (its expansion keys too, folders aside), its folder and its
+  /// row id; nil when the Public tab does not list it
+  private func revealPlace(
+    of request: WorkspaceManager.SidebarReveal
+  ) -> (containers: [String], folder: UUID?, row: UUID)? {
+    let section = request.kind == .table ? "tables" : "views"
+    let schemaState = publicSchemas
+    let found = publicEntities(schemaState, key: publicFilterKey(schemaState))
+    if let row = revealedRow(request, in: found.temporary.tables, found.temporary.views) {
+      return (["temporary-section", "temporary-section." + section], nil, row)
+    }
+    guard !schemaState.isEverySchemaHidden else { return nil }
+    let index = folderIndex
+    let isGrouped =
+      schemaState.schemaLoad.count > 1 && SidebarSectionModel.groupsBySchema(queryLanguage)
+    let layout: (folders: [FolderContent], rest: PublicEntities)
+    var containers: [String] = []
+    var prefix = ""
+    if isGrouped {
+      guard schemaState.listed.contains(request.schema) else { return nil }
+      layout = foldered(
+        entities(in: request.schema, of: found), folders: index?.bySchema[request.schema] ?? [])
+      containers.append("schema-group:" + request.schema)
+      prefix = request.schema + "."
+    } else {
+      layout = foldered(
+        listedEntities(of: found),
+        folders: index?.folders(in: Set(schemaState.listed)) ?? [])
+    }
+    if let row = revealedRow(request, in: layout.rest.tables, layout.rest.views) {
+      return (containers + [prefix + section], nil, row)
+    }
+    for content in layout.folders {
+      if let row = revealedRow(request, in: content.tables, content.views) {
+        return (containers + [Self.folderScrollID(content.folder.id)], content.folder.id, row)
+      }
+    }
+    return nil
+  }
+
+  private func revealedRow(
+    _ request: WorkspaceManager.SidebarReveal, in tables: [FilteredTable], _ views: [FilteredView]
+  ) -> UUID? {
+    switch request.kind {
+    case .table:
+      tables.first { $0.source.schema == request.schema && $0.source.name == request.name }?.id
+    case .view:
+      views.first { $0.source.schema == request.schema && $0.source.name == request.name }?.id
+    }
+  }
+
+  /// Scrolls one level per deferred pass: rows of the nested lazy stacks are laid out only once
+  /// their group or section is in view, so a direct jump to the row lands short
+  private func scrollToReveal(with proxy: ScrollViewProxy) {
+    guard let reveal = revealScroll else { return }
+    scrollToReveal(reveal, containers: reveal.containers[...], proxy)
+  }
+
+  private func scrollToReveal(
+    _ reveal: RevealScroll, containers: ArraySlice<String>, _ proxy: ScrollViewProxy
+  ) {
+    DispatchQueue.main.async {
+      guard revealScroll == reveal else { return }
+      if let container = containers.first {
+        proxy.scrollTo(container, anchor: .top)
+        scrollToReveal(reveal, containers: containers.dropFirst(), proxy)
+      } else {
+        proxy.scrollTo(reveal.row, anchor: .center)
+        revealScroll = nil
+      }
+    }
   }
 
   /// Every Public section draws open while a filter is applied (`EntitySection.forceExpanded`)
@@ -1213,6 +1354,8 @@ struct WorkspaceLeftSidebarContent: View {
         .padding(.leading, Spacing.lg)
       }
     }
+    // The palette's reveal scrolls to it
+    .id(table.id)
   }
 
   /// `folderID` is the folder listing the row, nil when ungrouped. A temporary table row on
@@ -1317,6 +1460,8 @@ struct WorkspaceLeftSidebarContent: View {
         member: view.folderMember, schema: view.source.schema, current: folderID,
         index: folderIndex)
     )
+    // The palette's reveal scrolls to it
+    .id(view.id)
   }
 
   private func openTable(_ table: DatabaseTable) {

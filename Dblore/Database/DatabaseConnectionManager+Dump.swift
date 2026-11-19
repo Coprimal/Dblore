@@ -367,6 +367,15 @@ extension DatabaseConnectionManager {
     "SELECT DATABASE(), @@session.time_zone, @@session.sql_mode, "
     + "@@session.group_concat_max_len, @@session.div_precision_increment"
 
+  /// Whether an all-rows result export runs on `type`: `resultExportSessionState` refuses the
+  /// others, and the Export sheet does not offer them all rows
+  nonisolated static func exportsAllRows(_ type: DatabaseType) -> Bool {
+    switch type {
+    case .postgresql, .mysql, .sqlite, .duckdb: true
+    case .mongodb, .clickhouse, .sqlserver, .redis: false
+    }
+  }
+
   /// The state of this (the tab's) session an all-rows result export applies to its own
   /// session, read here before the export connects: PostgreSQL its search_path, time zone and
   /// DateStyle, MySQL its database, time zone, sql_mode, group_concat_max_len and
@@ -379,12 +388,15 @@ extension DatabaseConnectionManager {
   ///   user is not the session user; `ResultExportError.sqlMode` when the MySQL sql_mode has a
   ///   flag that changes how the app reads the query; `ResultExportError.sessionStateUnreadable`
   ///   when a value cannot be read, a MySQL time zone or sql_mode is not plain or a MySQL
-  ///   integer setting is not one (fails closed);
-  ///   `DatabaseError.notConnected`.
+  ///   integer setting is not one (fails closed); `ResultExportError.unsupportedEngine` on an
+  ///   engine `exportsAllRows` refuses; `DatabaseError.notConnected`.
   func resultExportSessionState(hasStagedChanges: Bool) async throws -> ResultExportSessionState {
     guard let databaseType else { throw DatabaseError.notConnected }
     guard !hasStagedChanges, txState.isIdle, txOwner == nil, !userTxOpen else {
       throw ResultExportError.openChanges
+    }
+    guard Self.exportsAllRows(databaseType) else {
+      throw ResultExportError.unsupportedEngine(databaseType)
     }
     switch databaseType {
     case .postgresql:
@@ -441,7 +453,8 @@ extension DatabaseConnectionManager {
     case .duckdb:
       // DuckDB exports on this session
       return ResultExportSessionState()
-    case .mongodb, .clickhouse, .sqlserver, .redis:
+    default:
+      // Refused above (`exportsAllRows`)
       throw ResultExportError.unsupportedEngine(databaseType)
     }
   }

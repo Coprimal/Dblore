@@ -26,7 +26,10 @@ struct CommandPaletteView: View {
       Divider()
       results
     }
-    .modalFrame(width: 520, height: 420)
+    .modalFrame(
+      width: CommandPaletteMetrics.width,
+      height: min(CommandPaletteMetrics.maxHeight, Self.paletteHeight(for: sections))
+    )
     .background(Color.cardBackground)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
     .overlay(
@@ -35,6 +38,8 @@ struct CommandPaletteView: View {
     )
     .shadow(color: .black.opacity(0.25), radius: 24, x: 0, y: 8)
     .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 2)
+    // The card grows down from a fixed top, so the search field stays put as results change.
+    .frame(maxHeight: CommandPaletteMetrics.maxHeight, alignment: .top)
     .onAppear {
       if let responder = NSApp.keyWindow?.firstResponder as? NSView,
         !((responder as? NSTextView)?.isFieldEditor ?? false)
@@ -112,7 +117,7 @@ struct CommandPaletteView: View {
           Text("No matches")
             .font(.caption)
             .foregroundColor(.foregroundMuted)
-            .frame(maxWidth: .infinity, minHeight: 120)
+            .frame(maxWidth: .infinity, minHeight: CommandPaletteMetrics.emptyListHeight)
         } else {
           // Not lazy: at most 100 rows, and scrollTo lands short on rows a lazy stack has not laid out.
           VStack(alignment: .leading, spacing: 0) {
@@ -123,6 +128,7 @@ struct CommandPaletteView: View {
                 .padding(.horizontal, Spacing.md)
                 .padding(.top, Spacing.sm)
                 .padding(.bottom, Spacing.xxs)
+                .frame(height: CommandPaletteMetrics.sectionHeaderHeight)
 
               ForEach(section.items) { item in
                 CommandPaletteRow(item: item, isSelected: item.id == activeID) {
@@ -162,6 +168,19 @@ struct CommandPaletteView: View {
       sections.append(CommandPaletteSection(id: "history", kind: .history, items: model.history))
     }
     return sections
+  }
+
+  /// Search field, divider and list, from the fixed row and header heights. Never measured:
+  /// a measured height in state drives the frame into a live-resize loop. Uncapped.
+  private static func paletteHeight(for sections: [CommandPaletteSection]) -> CGFloat {
+    let items = sections.flatMap(\.items)
+    // Also while a rank is pending, so the card does not collapse between keystrokes.
+    guard !items.isEmpty else {
+      return CommandPaletteMetrics.searchHeight + CommandPaletteMetrics.emptyListHeight
+    }
+    let rows = items.reduce(0) { $0 + CommandPaletteRow.height(for: $1) }
+    let headers = CGFloat(sections.count) * CommandPaletteMetrics.sectionHeaderHeight
+    return CommandPaletteMetrics.searchHeight + rows + headers + Spacing.sm
   }
 
   private var flatItems: [CommandPaletteItem] {
@@ -223,6 +242,18 @@ struct CommandPaletteView: View {
     didPerform = true
     isPresented = false
   }
+}
+
+/// Fixed heights, so the palette sizes itself from its items.
+private enum CommandPaletteMetrics {
+  static let width: CGFloat = 520
+  static let maxHeight: CGFloat = 420
+  /// Search capsule with its padding, plus the divider under it.
+  static let searchHeight: CGFloat = SidebarFilterMetrics.controlHeight + Spacing.sm * 2 + 1
+  static let oneLineRowHeight: CGFloat = 25
+  static let twoLineRowHeight: CGFloat = 42
+  static let sectionHeaderHeight: CGFloat = 25
+  static let emptyListHeight: CGFloat = 120
 }
 
 /// Weak so a closed tab's editor is not kept alive by the palette.
@@ -294,6 +325,7 @@ private struct CommandPaletteRow: View {
     }
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.xs)
+    .frame(height: Self.height(for: item))
     .frame(maxWidth: .infinity, alignment: .leading)
     .contentShape(Rectangle())
     .background(
@@ -327,10 +359,20 @@ private struct CommandPaletteRow: View {
   }
 
   private var titleText: String {
-    collapsed(item.title)
+    Self.collapsed(item.title)
   }
 
   private var detailText: String? {
+    Self.detailText(for: item)
+  }
+
+  /// Two lines when the item has a detail line, one otherwise.
+  static func height(for item: CommandPaletteItem) -> CGFloat {
+    detailText(for: item) == nil
+      ? CommandPaletteMetrics.oneLineRowHeight : CommandPaletteMetrics.twoLineRowHeight
+  }
+
+  private static func detailText(for item: CommandPaletteItem) -> String? {
     let raw: String?
     switch item {
     case .table(let schema, _), .view(let schema, _):
@@ -355,7 +397,7 @@ private struct CommandPaletteRow: View {
     return text.isEmpty ? nil : text
   }
 
-  private func collapsed(_ text: String) -> String {
+  private static func collapsed(_ text: String) -> String {
     text.replacingOccurrences(of: "\n", with: " ")
       .trimmingCharacters(in: .whitespacesAndNewlines)
   }

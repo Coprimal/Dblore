@@ -333,6 +333,7 @@ struct DataViewerControls: View {
 struct DataViewerPagingBar: View {
   @Bindable var viewModel: NotebookViewModel
   @State private var showColumns = false
+  @State private var exportRequest: QueryCopyBar.ExportRequest?
 
   var body: some View {
     if let state = viewModel.dataViewer {
@@ -364,6 +365,11 @@ struct DataViewerPagingBar: View {
 
         Spacer(minLength: Spacing.sm)
 
+        // MongoDB keeps its own Export button in the header
+        if !viewModel.isMongoDataViewer {
+          exportButton
+        }
+
         let tabs = displayTabs
         if tabs.count > 1 {
           ResultDisplayPicker(mode: $viewModel.dataViewerDisplayMode, tabs: tabs, large: true)
@@ -378,7 +384,31 @@ struct DataViewerPagingBar: View {
           .fill(Color.foregroundMuted.opacity(0.1))
           .frame(height: 1)
       }
+      .modifier(
+        ResultExportPresentation(
+          request: $exportRequest, viewModel: viewModel, cellId: nil, queryIndex: nil,
+          dialect: viewModel.sqlDialect,
+          queryLanguage: state.databaseType.capabilities.queryLanguage))
     }
+  }
+
+  /// Opens the Export sheet of the page on CSV (the sheet has its own format picker), with the
+  /// page's all-rows offer. Disabled with no page, while a query runs, or when not connected.
+  private var exportButton: some View {
+    let result = viewModel.editorResult.flatMap { $0.error == nil ? $0 : nil }
+    return Button {
+      guard let result else { return }
+      QueryCopyBar.openExport(.csv, result: result, viewModel: viewModel, cellId: nil) {
+        exportRequest = $0
+      }
+    } label: {
+      Image(systemName: "square.and.arrow.up")
+    }
+    .buttonStyle(GhostButtonStyle(iconOnly: true))
+    .controlSize(.small)
+    .help("Export the rows as CSV, Excel, JSON and more")
+    .disabled(
+      result == nil || viewModel.isEditorQueryRunning || viewModel.connectionState != .connected)
   }
 
   /// Selected rows of the grid, in Grid mode and the Documents section of a collection only

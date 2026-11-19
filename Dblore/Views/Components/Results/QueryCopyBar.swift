@@ -146,27 +146,10 @@ struct QueryCopyBar: View {
         }
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-      .sheet(item: $exportRequest) { request in
-        ResultExportSheet(
-          result: request.result,
-          format: request.format,
-          queryLanguage: queryLanguage,
-          queryIndex: queryIndex,
-          allRows: allRowsChoice(request.allRows),
-          loadShownRows: shownRowsLoader(request.result),
-          onExport: { options, exported in
-            let index = queryIndex
-            let exportDialect = dialect
-            let table = insertTarget(for: exported)
-            exportRequest = nil
-            DispatchQueue.main.async {
-              DataExporter.download(
-                result: exported, options: options, queryIndex: index, dialect: exportDialect,
-                schema: table.schema, name: table.name)
-            }
-          },
-          onCancel: { exportRequest = nil })
-      }
+      .modifier(
+        ResultExportPresentation(
+          request: $exportRequest, viewModel: viewModel, cellId: cellId, queryIndex: queryIndex,
+          dialect: dialect, queryLanguage: queryLanguage))
     }
   }
 
@@ -381,15 +364,6 @@ struct QueryCopyBar: View {
 
   // MARK: - Download/Copy Actions
 
-  /// The Export sheet's format, the result it exports (cut cells already loaded, unless
-  /// `allRows` has a source) and its all-rows offer
-  struct ExportRequest: Identifiable {
-    let id = UUID()
-    let format: ExportFormat
-    let result: CellResult
-    var allRows: AllRowsExportOffer? = nil
-  }
-
   /// `result` with every cut cell of a lazy data-viewer page loaded (progress and Cancel in
   /// the grid), the same result when it has none; nil when a load failed or was cancelled
   /// (the view model told the user): nothing is copied or exported.
@@ -400,69 +374,12 @@ struct QueryCopyBar: View {
     return await viewModel.fullyLoadedResult(result, action: action)
   }
 
-  /// The Export sheet request for `format`, its result fully loaded; nil opens no sheet
-  static func exportRequest(
-    format: ExportFormat, result: CellResult, viewModel: NotebookViewModel?, cellId: UUID? = nil
-  ) async -> ExportRequest? {
-    guard let loaded = await loadedResult(result, viewModel: viewModel, action: "Export") else {
-      return nil
-    }
-    return ExportRequest(
-      format: format, result: loaded,
-      allRows: viewModel?.allRowsExportOffer(for: loaded, cellId: cellId))
-  }
-
-  /// The Export sheet request that opens at once, with the result as shown: one with no cut
-  /// cell, or one with an all-rows source (its cut cells load only for a "Shown rows" export).
-  /// Nil: the cut cells load first (`exportRequest`).
-  static func openingExportRequest(
-    format: ExportFormat, result: CellResult, viewModel: NotebookViewModel?, cellId: UUID?
-  ) -> ExportRequest? {
-    let allRows = viewModel?.allRowsExportOffer(for: result, cellId: cellId)
-    if let viewModel, viewModel.hasUnloadedCells(in: result), allRows?.source == nil {
-      return nil
-    }
-    return ExportRequest(format: format, result: result, allRows: allRows)
-  }
-
   /// Opens the Export sheet: at once when it can (`openingExportRequest`), else once the cut
   /// cells loaded
   private func requestExport(_ format: ExportFormat) {
-    if let request = Self.openingExportRequest(
-      format: format, result: result, viewModel: viewModel, cellId: cellId)
-    {
-      exportRequest = request
-      return
+    Self.openExport(format, result: result, viewModel: viewModel, cellId: cellId) {
+      exportRequest = $0
     }
-    let result = result
-    let cellId = cellId
-    Task {
-      guard
-        let request = await Self.exportRequest(
-          format: format, result: result, viewModel: viewModel, cellId: cellId)
-      else { return }
-      exportRequest = request
-    }
-  }
-
-  /// The sheet's "All rows" for `offer`: the view model runs the read again
-  private func allRowsChoice(_ offer: AllRowsExportOffer?) -> AllRowsExportChoice? {
-    guard let offer else { return nil }
-    let viewModel = viewModel
-    return AllRowsExportChoice(
-      offer: offer,
-      write: { source, options, url, progress in
-        guard let viewModel else { throw DatabaseError.notConnected }
-        return try await viewModel.exportAllRows(
-          source, options: options, to: url, progress: progress)
-      },
-      workspaceID: viewModel?.allRowsExportWorkspaceID)
-  }
-
-  /// Loads the cut cells of `result` before a "Shown rows" export; nil when it has none
-  private func shownRowsLoader(_ result: CellResult) -> (() async -> CellResult?)? {
-    guard let viewModel, viewModel.hasUnloadedCells(in: result) else { return nil }
-    return { await Self.loadedResult(result, viewModel: viewModel, action: "Export") }
   }
 
   /// Runs `copy` on the result (at once, or once its cut cells loaded), then shows `feedback`
@@ -519,18 +436,11 @@ struct QueryCopyBar: View {
 
   private func handleCopyInsert(result: CellResult) {
     let dialect = dialect
-    let table = insertTarget(for: result)
+    let table = Self.insertTarget(for: result, viewModel: viewModel, cellId: cellId)
     handleCopy(.insert) {
       DataExporter.copyInsert(
         result: $0, schema: table.schema, name: table.name, dialect: dialect)
     }
-  }
-
-  /// The unquoted table of `result`'s INSERT script: the editor's data viewer relation, else
-  /// the result's edit target (`insertTable(dataViewer:editTarget:)`)
-  private func insertTarget(for result: CellResult) -> (schema: String?, name: String?) {
-    insertTable(
-      dataViewer: cellId == nil ? viewModel?.dataViewer : nil, editTarget: result.editTarget)
   }
 }
 

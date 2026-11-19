@@ -200,6 +200,32 @@ struct CommandPaletteModelTests {
     #expect(manager.activeViewModel?.isRightSidebarVisible == true)
   }
 
+  @Test("perform on a table or view opens its data viewer and reveals it in the left sidebar")
+  func performRevealsTableAndViewInSidebar() {
+    let manager = makeWorkspace()
+    if manager.isLeftSidebarVisible { manager.toggleLeftSidebar() }
+
+    #expect(manager.perform(.table(schema: "public", name: "orders")))
+    #expect(manager.activeViewModel?.dataViewer?.name == "orders")
+    #expect(manager.isLeftSidebarVisible)
+    #expect(manager.workspace.settings.isLeftSidebarVisible == true)
+    let tableReveal = manager.sidebarReveal
+    #expect(tableReveal?.schema == "public")
+    #expect(tableReveal?.name == "orders")
+    #expect(tableReveal?.kind == .table)
+
+    // A visible sidebar stays open; the same row again is a new request
+    #expect(manager.perform(.table(schema: "public", name: "orders")))
+    #expect(manager.isLeftSidebarVisible)
+    #expect(manager.sidebarReveal?.token != tableReveal?.token)
+
+    #expect(manager.perform(.view(schema: "sales", name: "totals")))
+    #expect(manager.activeViewModel?.dataViewer?.name == "totals")
+    #expect(manager.sidebarReveal?.schema == "sales")
+    #expect(manager.sidebarReveal?.name == "totals")
+    #expect(manager.sidebarReveal?.kind == .view)
+  }
+
   @Test("Cmd+K does not open the palette over Settings or the connection form")
   func paletteStaysClosedOverModals() {
     let manager = makeWorkspace()

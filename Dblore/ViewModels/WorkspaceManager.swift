@@ -410,6 +410,23 @@ class WorkspaceManager: Identifiable {
 
   var isLeftSidebarVisible: Bool = false
 
+  /// A table or view to reveal in the left sidebar's Public tab
+  struct SidebarReveal: Equatable {
+    enum Kind: Equatable {
+      case table
+      case view
+    }
+
+    let schema: String
+    let name: String
+    let kind: Kind
+    /// New per request, so revealing the same table again still runs
+    let token = UUID()
+  }
+
+  /// Set by the command palette; the sidebar opens what holds the row, scrolls to it and clears it
+  var sidebarReveal: SidebarReveal?
+
   // Schema Visualizer state (workspace-level)
   var isSchemaVisualizerActive: Bool = false
   var schemaGraph: SchemaGraph?

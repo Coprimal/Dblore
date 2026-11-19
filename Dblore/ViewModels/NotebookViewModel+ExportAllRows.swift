@@ -4,7 +4,8 @@
 // result's read runs again on a separate connection (`ResultExportRunner`) and every row is
 // written. Offered only for a read that may run again without the user: one statement that
 // `ReadOnlyQueryGuard` passes, without `:name` parameters (a data viewer page reads its whole
-// relation with `DataViewerState.exportSQL`); never for MongoDB.
+// relation with `DataViewerState.exportSQL`); only on an engine whose results export all rows
+// (`DatabaseConnectionManager.exportsAllRows`).
 
 import Foundation
 
@@ -46,15 +47,16 @@ extension NotebookViewModel {
     + " so all rows cannot be exported."
   static let allRowsNoQueryReason = "This result has no query to run again."
 
-  /// The all-rows export of `result` (of the cell `cellId`, nil in the editor): every SQL data
+  /// The all-rows export of `result` (of the cell `cellId`, nil in the editor): every data
   /// viewer page, whatever it shows; an editor or notebook result only when the grid holds part
-  /// of it (row cap, byte budget, cut cells). Nil when the shown rows are every row.
+  /// of it (row cap, byte budget, cut cells). Unavailable on an engine whose results do not
+  /// export all rows. Nil when the shown rows are every row.
   func allRowsExportOffer(for result: CellResult, cellId: UUID?) -> AllRowsExportOffer? {
     guard result.error == nil else { return nil }
     let page = cellId == nil ? dataViewer : nil
     if let page {
-      guard page.databaseType != .mongodb else {
-        return .unavailable(reason: Self.allRowsMongoDBReason)
+      if let reason = Self.allRowsEngineReason(page.databaseType) {
+        return .unavailable(reason: reason)
       }
       return .available(
         AllRowsExportSource(
@@ -64,7 +66,7 @@ extension NotebookViewModel {
       return nil
     }
     let engine = notebook.connectionConfig?.databaseType ?? .postgresql
-    guard engine != .mongodb else { return .unavailable(reason: Self.allRowsMongoDBReason) }
+    if let reason = Self.allRowsEngineReason(engine) { return .unavailable(reason: reason) }
     guard let query = result.sourceQuery else {
       return .unavailable(reason: Self.allRowsNoQueryReason)
     }
@@ -78,6 +80,13 @@ extension NotebookViewModel {
     return .available(
       AllRowsExportSource(
         sql: statement, columns: result.columns, schema: table.schema, name: table.name))
+  }
+
+  /// Why the results of `engine` cannot export all rows, nil when they can
+  private static func allRowsEngineReason(_ engine: DatabaseType) -> String? {
+    guard !DatabaseConnectionManager.exportsAllRows(engine) else { return nil }
+    if engine == .mongodb { return allRowsMongoDBReason }
+    return ResultExportError.unsupportedEngine(engine).errorDescription
   }
 
   /// Why the query of a result cannot run again, in the sheet's words (never the guard's

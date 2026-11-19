@@ -5,7 +5,6 @@
 
 import Foundation
 import Testing
-import os
 
 @testable import Dblore
 
@@ -13,11 +12,17 @@ import os
 struct MCPJSONRPCTests {
   private struct FakeTools: MCPToolCalling {
     var delay: Duration?
+    /// Set when a call starts, and when its delay is cut by a cancel
+    let started = FiredFlag()
+    let cancelled = FiredFlag()
 
     var tools: [MCPToolDefinition] { MCPToolService.tools }
 
     func call(_ name: String, arguments: [String: JSONValue]) async -> MCPToolResult {
-      if let delay { try? await Task.sleep(for: delay) }
+      started.set()
+      if let delay {
+        do { try await Task.sleep(for: delay) } catch { cancelled.set() }
+      }
       switch name {
       case "list_connections": return MCPToolResult(text: "[]", isError: false)
       case "run_query":
@@ -29,11 +34,10 @@ struct MCPJSONRPCTests {
   }
 
   private func handler(
-    delay: Duration? = nil, timeout: Duration = .seconds(60),
+    _ tools: FakeTools = FakeTools(), timeout: Duration = .seconds(60),
     writeTimeout: Duration = .seconds(60)
   ) -> MCPHTTPServer.Handler {
-    MCPJSONRPC.handler(
-      tools: FakeTools(delay: delay), version: "9.9", timeout: timeout, writeTimeout: writeTimeout)
+    MCPJSONRPC.handler(tools: tools, version: "9.9", timeout: timeout, writeTimeout: writeTimeout)
   }
 
   private func request(
@@ -203,35 +207,49 @@ struct MCPJSONRPCTests {
         == 200)
   }
 
+  // Each injected delay and the limit it tests (a timeout, a `boundedWait`) are at least 5x
+  // apart, so a loaded run cannot cross them; the outcome (status, a cancelled call) is
+  // asserted, not the elapsed time.
+
   @Test("Cancelling a slow tools/call returns promptly")
   func cancellation() async {
-    let handle = handler(delay: .seconds(30))
+    let tools = FakeTools(delay: .seconds(300))
+    let handle = handler(tools, timeout: .seconds(300))
     let call = request(rpc("tools/call", params: #"{"name":"list_connections"}"#))
-    let start = ContinuousClock.now
     let task = Task { await handle(call) }
-    try? await Task.sleep(for: .milliseconds(200))
+    guard await boundedWait("the tool call starts", { await tools.started.wait() }) != nil else {
+      task.cancel()
+      return
+    }
     task.cancel()
-    _ = await task.value
-    #expect(ContinuousClock.now - start < .seconds(5))
+    guard await boundedWait("the cancelled request returns", { await task.value }) != nil else {
+      return
+    }
+    await boundedWait("the tool call is cancelled") { await tools.cancelled.wait() }
   }
 
   @Test("A request still running after the timeout is cancelled and answered 504")
   func timeout() async {
-    let handle = handler(delay: .seconds(30), timeout: .milliseconds(300))
-    let start = ContinuousClock.now
-    let response = await handle(
-      request(rpc("tools/call", params: #"{"name":"list_connections"}"#)))
-    #expect(response.status == 504)
-    #expect(ContinuousClock.now - start < .seconds(5))
+    let tools = FakeTools(delay: .seconds(300))
+    let handle = handler(tools, timeout: .milliseconds(300))
+    let call = request(rpc("tools/call", params: #"{"name":"list_connections"}"#))
+    let response = await boundedWait("the timed-out request returns") { await handle(call) }
+    #expect(response?.status == 504)
+    // A loaded run may hit the timeout before the Server starts the call; one that started is cut.
+    if response != nil, tools.started.isSet {
+      await boundedWait("the timed-out tool call is cancelled") { await tools.cancelled.wait() }
+    }
   }
 
   @Test("An execute_write call gets the write timeout, not the short one")
   func writeTimeout() async {
     let handle = handler(
-      delay: .seconds(1), timeout: .milliseconds(300), writeTimeout: .seconds(3))
-    let response = await handle(
-      request(rpc("tools/call", params: #"{"name":"execute_write"}"#)))
-    #expect(response.status == 200)
+      FakeTools(delay: .seconds(1)), timeout: .milliseconds(200), writeTimeout: .seconds(60))
+    let call = request(rpc("tools/call", params: #"{"name":"execute_write"}"#))
+    let response = await boundedWait("the execute_write request returns", timeout: .seconds(120)) {
+      await handle(call)
+    }
+    #expect(response?.status == 200)
   }
 
   @Test(
@@ -260,19 +278,12 @@ struct MCPJSONRPCTests {
       #"{"jsonrpc":"2.0","id":true,"method":"ping"}"#,
     ])
   func cancellationUnanswered(body: String) async throws {
-    let handle = handler()
-    let returned = OSAllocatedUnfairLock(initialState: false)
+    let handle = handler(timeout: .seconds(300))
     let call = request(body)
-    let task = Task {
-      _ = await handle(call)
-      returned.withLock { $0 = true }
-    }
+    let task = Task { await handle(call) }
+    // Lets the request reach the transport's wait (not a limit: a cancel before it returns too).
     try await Task.sleep(for: .milliseconds(200))
     task.cancel()
-    let deadline = ContinuousClock.now + .seconds(5)
-    while !returned.withLock({ $0 }), ContinuousClock.now < deadline {
-      try await Task.sleep(for: .milliseconds(20))
-    }
-    #expect(returned.withLock { $0 })
+    await boundedWait("the cancelled request returns") { _ = await task.value }
   }
 }

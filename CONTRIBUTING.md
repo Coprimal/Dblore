@@ -68,9 +68,9 @@ a `DispatchSemaphore.wait` in a test gate blocks its pool thread). So keep heavy
 tests `nonisolated`, never block a pool thread on the main thread or a semaphore, and post to
 main-queue observers asynchronously (`LocalDataNotifications.post` hops to the main queue).
 Durations of 30–35 s in a parallel run that finishes in 80–90 s are queue time, not a stall.
-Wall-clock assertions (`MCPJSONRPCTests`, `MongoshSplitterTests`) can fail above a load average
-of about 40; rerun them alone. `LocalDataNotificationGate` records an issue naming its holder
-and waiter after 45 s instead of wedging the run.
+Wall-clock assertions (`MongoshSplitterTests`) can fail above a load average of about 40;
+rerun them alone. `LocalDataNotificationGate` records an issue naming its holder and waiter
+after 45 s instead of wedging the run.
 
 ## mysql-nio fork
 

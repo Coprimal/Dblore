@@ -601,10 +601,17 @@ struct SQLDumpWriterTests {
       material: nil, sshCredential: nil, sessionFactory: factory, temporaryDirectory: directory)
     let destination = directory.appendingPathComponent("out.sql")
     let task = Task { try await writer.write(to: destination) }
-    // The dump's session, once the writer has made it (no deadline: the suite's limit applies)
-    var made = factory.sessions.makeAsyncIterator()
-    let session = try #require(await made.next())
-    await session.waitUntilQueryStarted()
+    defer { task.cancel() }
+    // Each wait is bounded well under the suite's limit: a stall fails at its named step
+    let made = await boundedWait("the dump's session made", timeout: .seconds(15)) {
+      var sessions = factory.sessions.makeAsyncIterator()
+      return await sessions.next()
+    }
+    let session = try #require(made ?? nil)
+    let started: Void? = await boundedWait("the dump's first read started", timeout: .seconds(15)) {
+      await session.waitUntilQueryStarted()
+    }
+    guard started != nil else { return }
     // Mid-dump, the temporary file is private to the user
     let temporary = try #require(try Self.leftovers(in: directory).first)
     let mode =
@@ -612,7 +619,15 @@ struct SQLDumpWriterTests {
         atPath: directory.appendingPathComponent(temporary).path)[.posixPermissions] as? Int
     #expect(mode == 0o600)
     task.cancel()
-    await #expect(throws: CancellationError.self) { try await task.value }
+    guard
+      let result = await boundedWait(
+        "the cancelled dump ends", timeout: .seconds(15), { await task.result })
+    else {
+      // Unwind the writer if its read missed the interrupt
+      session.releaseSlowReads()
+      return
+    }
+    #expect(throws: CancellationError.self) { try result.get() }
     #expect(session.statements.last == "ROLLBACK")
     #expect(session.didClose)
     #expect(!FileManager.default.fileExists(atPath: destination.path))

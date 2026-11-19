@@ -196,11 +196,18 @@ struct ExecutionQueueTests {
 
     // The first cell's statement is still being cancelled on the server
     queue.enqueue(cellId: first, query: "SELECT pg_sleep(30)")
+    // Hold the first run before the next enqueue replaces it: set and read in one main-actor job
+    let firstRunCaptured = FiredFlag()
+    let firstRun = Task { @MainActor in
+      firstRunCaptured.set()
+      await queue.waitForProcessingRun()
+    }
     #expect(await queue.waitForExecuting(cellId: first))
     let firstBlocked = await boundedWait(
-      "the first cell blocking in its run", timeout: .seconds(45)
+      "the first cell blocking in its run", timeout: .seconds(20)
     ) {
       await firstParked.wait()
+      await firstRunCaptured.wait()
     }
     guard firstBlocked != nil else { return }
     queue.cancelAll()
@@ -209,14 +216,17 @@ struct ExecutionQueueTests {
     queue.enqueue(cellId: second, query: "SELECT 2")
     #expect(await queue.waitForExecuting(cellId: second))
     let secondBlocked = await boundedWait(
-      "the second cell blocking in its run", timeout: .seconds(45)
+      "the second cell blocking in its run", timeout: .seconds(20)
     ) { await secondParked.wait() }
     guard secondBlocked != nil else { return }
     queue.enqueue(cellId: third, query: "SELECT 3")
 
     // The cancelled statement returns: its run must stop, not pick up the third cell
     releaseFirst?.resume()
-    try await Task.sleep(for: .milliseconds(100))
+    let firstReturned = await boundedWait(
+      "the cancelled run returning", timeout: .seconds(15)
+    ) { await firstRun.value }
+    guard firstReturned != nil else { return }
     releaseSecond?.resume()
 
     let state = await queue.waitForTask(cellId: third)

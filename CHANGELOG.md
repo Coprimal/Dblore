@@ -2,6 +2,28 @@
 
 All notable user-visible changes to Dblore, newest first. Each release is a section headed `## vX.Y.Z (YYYY-MM-DD)` with `### Security`, `### Added`, `### Improved`, `### Fixed` and `### Upgrade notes` subsections (empty ones omitted); every entry ends with links to its commits. Sections are written by `/cf-ship`, and the release workflow publishes the matching section as the GitHub Release notes.
 
+## Unreleased
+
+### Improved
+
+- **Command palette.** The `Cmd+K` palette fits its results (up to 420 pt high). Return on a table or view opens it in the data viewer and also reveals it in the sidebar: the sidebar shows, its schema, section or folder expands, and the row scrolls into view. [#fd725492](https://github.com/Coprimal/Dblore/commit/fd725492)
+- **Export from the data viewer.** A SQL data viewer page has an Export button in its paging bar: the shown rows as CSV, Excel, JSON and the other formats, or All rows of the table. MongoDB keeps its own Export. [#fd725492](https://github.com/Coprimal/Dblore/commit/fd725492)
+- **All rows on ClickHouse and SQL Server.** The export sheet shows All rows as unavailable, with the reason, for ClickHouse and SQL Server results, instead of failing when it writes. [#fd725492](https://github.com/Coprimal/Dblore/commit/fd725492)
+
+### Fixed
+
+- **NUL characters on PostgreSQL.** A statement whose text contains a NUL character is refused ("This statement contains a NUL character, which the database would cut off.") before it is sent, and a restore of a file that holds one is refused before anything runs. [#44451d2e](https://github.com/Coprimal/Dblore/commit/44451d2e)
+- **SQLite pages after a dropped column.** When a binary column was dropped after a table tab read the table, Reload shows an error instead of the column's name in every row. [#44451d2e](https://github.com/Coprimal/Dblore/commit/44451d2e)
+- **Workspace icon color.** A recent workspace's icon color is kept after a relaunch. [#44451d2e](https://github.com/Coprimal/Dblore/commit/44451d2e)
+- **PostgreSQL extension values.** ltree, lquery, ltxtquery and hstore values, and one-dimensional arrays of these and of citext, show as the server's text instead of raw bytes. Cell edits, staged updates and deletes and the cascade preview on an ltree or hstore key now work. Two-dimensional arrays still show as bytes. [#9633f324](https://github.com/Coprimal/Dblore/commit/9633f324)
+- **Lock and the "modified externally" alert.** Lock Workspace and Remove Lock no longer raise a false "modified externally" alert; a real change from outside still does. [#a9c84dab](https://github.com/Coprimal/Dblore/commit/a9c84dab)
+- **Settings search and Editor shortcuts.** A search hit on an Editor keyboard shortcut opens Settings > Keyboard on its Editor tab, with the shortcut in view. [#a9c84dab](https://github.com/Coprimal/Dblore/commit/a9c84dab)
+- **Toasts per window.** A workspace's toast, such as "Not connected to database", shows only in its own window while that window is on screen (visible, not minimized, on the active Space), and otherwise in the window you are using. One toast shows at a time across windows. [#f01d6b2e](https://github.com/Coprimal/Dblore/commit/f01d6b2e)
+
+### Upgrade notes
+
+- **PostgreSQL extension columns.** ltree, lquery, ltxtquery, hstore and citext array values now reach MCP, Shortcuts and Parquet and Excel exports as text, and the type names of citext, hstore and ltree columns read CITEXT, HSTORE and LTREE instead of USER-DEFINED. [#9633f324](https://github.com/Coprimal/Dblore/commit/9633f324)
+
 ## v0.10.2 (2026-11-17)
 
 ### Improved

@@ -929,10 +929,10 @@ struct LockedWorkspaceIOTests {
   }
 
   @Test(
-    "A change check while this app rewrites the file waits for it; a later change still asks",
-    arguments: [LockEnvelope.Kind.notebook, .script])
+    "A change check during this app's rewrite waits; an outside change before or after still asks",
+    arguments: [LockEnvelope.Kind.notebook, .script], [false, true])
   @MainActor
-  func checkDuringOwnRewriteWaits(kind: LockEnvelope.Kind) async throws {
+  func checkDuringOwnRewriteWaits(kind: LockEnvelope.Kind, outsideChangeFirst: Bool) async throws {
     defer { try? FileManager.default.removeItem(at: directory) }
     let url = directory.appendingPathComponent(kind == .notebook ? "book.dblore" : "query.sql")
     try write("SELECT 1;", to: url, dated: Date().addingTimeInterval(-60))
@@ -954,16 +954,30 @@ struct LockedWorkspaceIOTests {
       await boundedWait("Earlier check") { await pending.value }
     }
 
+    if outsideChangeFirst {
+      // Another writer's change lands before the rewrite; its check only runs during it
+      try write("SELECT 0;", to: url, dated: Date().addingTimeInterval(-30))
+    }
+
     // In rewriteTabFile's order: the bytes land, and the check runs, before the date update
     document.beginOwnRewrite()
     try write("SELECT 2;", to: url, dated: Date())
     try await reportChange(to: document, "Own rewrite")
     try #require(
       !document.fileConflictState.showDialog, "conflict shown while the rewrite is in flight")
-    document.updateLastKnownModificationDate()
+    if outsideChangeFirst {
+      // Over a change not shown yet, the rewrite only notes its date: the re-run check asks
+      document.noteOwnRewrite()
+    } else {
+      document.updateLastKnownModificationDate()
+    }
     document.endOwnRewrite()
-    if let deferred = deferredCheck(of: document) {
-      await boundedWait("Deferred check") { await deferred.value }
+    let deferred = try #require(deferredCheck(of: document), "the waiting check did not run again")
+    await boundedWait("Deferred check") { await deferred.value }
+    if outsideChangeFirst {
+      #expect(
+        document.fileConflictState.showDialog, "the earlier outside change raised no conflict")
+      return
     }
     #expect(!document.fileConflictState.showDialog, "conflict shown after the rewrite ended")
 

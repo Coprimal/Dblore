@@ -3306,12 +3306,14 @@ kbd {
 }
 
 .footer-col a,
-.footer-brand p a {
+.footer-brand p a,
+.footer-base a {
   text-decoration: none;
 }
 
 .footer-col a:hover,
-.footer-brand p a:hover {
+.footer-brand p a:hover,
+.footer-base a:hover {
   text-decoration: underline;
 }
 

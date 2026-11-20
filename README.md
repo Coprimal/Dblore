@@ -89,7 +89,7 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)** for guidelines.
 
 ## License
 
-Copyright (C) 2025-2026 Coprimal.
+Copyright (C) 2025-2026 [Coprimal](https://coprimal.dev).
 
 Dblore is open source under the
 [GNU Affero General Public License v3.0](https://www.gnu.org/licenses/agpl-3.0.html).

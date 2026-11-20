@@ -2168,6 +2168,364 @@ kbd {
   100% { opacity: 0; }
 }
 
+/* SQL dump. Resting state (also the reduced-motion state) is the end of the loop: file written. */
+
+.mk-dump {
+  padding: 0.65rem 0.7rem;
+}
+
+.mk-dump-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.mk-dump-title b {
+  font-weight: 600;
+}
+
+.mk-dump-title span {
+  color: var(--mk-muted);
+  font-size: 0.6rem;
+}
+
+.mk-dump-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, 3.1rem);
+  align-items: center;
+  padding: 0.2rem 0.35rem;
+  border-top: 1px solid var(--mk-line);
+  font-family: var(--font-outlier);
+  font-size: 0.62rem;
+}
+
+.mk-dump-head {
+  border-top: 0;
+  color: var(--mk-muted);
+  font-family: var(--font-body);
+  font-size: 0.58rem;
+}
+
+.mk-dump-head span:not(:first-child) {
+  justify-self: center;
+}
+
+.mk-dump-row i {
+  justify-self: center;
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 1px solid var(--mk-muted);
+  border-radius: 0.2rem;
+}
+
+.mk-dump-row i.on {
+  border-color: var(--mk-blue);
+  background: var(--mk-blue) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='m3 6 2 2 4-4' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 100% no-repeat;
+}
+
+.mk-dump-row--off {
+  color: var(--mk-muted);
+}
+
+.mk-dump-foot {
+  display: grid;
+  margin-top: 0.45rem;
+}
+
+.mk-dump-foot > span {
+  grid-area: 1 / 1;
+  align-self: center;
+}
+
+.mk-dump-bar {
+  height: 0.3rem;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--mk-raise);
+  opacity: 0;
+  animation: dump-bar 7s var(--ease-out) infinite;
+}
+
+.mk-dump-bar s {
+  display: block;
+  height: 100%;
+  background: var(--mk-blue);
+  transform-origin: left;
+  animation: dump-fill 7s var(--ease-in-out) infinite;
+}
+
+.mk-dump-done {
+  justify-self: start;
+  padding: 0.1rem 0.55rem 0.1rem 0.45rem;
+  border-radius: var(--radius-pill);
+  background: rgb(60 207 127 / 0.15);
+  color: var(--mk-green);
+  font-family: var(--font-outlier);
+  font-size: 0.6rem;
+  animation: dump-done 7s var(--ease-out) infinite;
+}
+
+.mk-dump-done::before {
+  content: "✓ ";
+}
+
+@keyframes dump-bar {
+  0%, 8% { opacity: 0; }
+  12%, 56% { opacity: 1; }
+  60%, 100% { opacity: 0; }
+}
+
+@keyframes dump-fill {
+  0%, 12% { transform: scaleX(0); }
+  54%, 100% { transform: scaleX(1); }
+}
+
+@keyframes dump-done {
+  0%, 58% { opacity: 0; transform: scale(0.92); }
+  64%, 94% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+
+/* Data Rewind. Resting state is the end of the loop: the edit picked and rewound. */
+
+.mk-rewind {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.65rem 0.7rem;
+}
+
+.mk-rewind-title {
+  font-weight: 600;
+}
+
+.mk-rewind-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--mk-line);
+  border-radius: 0.4rem;
+}
+
+.mk-rewind-entry > i {
+  flex-shrink: 0;
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 1px solid var(--mk-muted);
+  border-radius: 0.2rem;
+}
+
+.mk-rewind-entry > span {
+  display: grid;
+  min-width: 0;
+}
+
+.mk-rewind-entry b {
+  font-weight: 500;
+}
+
+.mk-rewind-entry small {
+  color: var(--mk-muted);
+  font-size: 0.58rem;
+  white-space: nowrap;
+}
+
+.mk-rewind-entry--pick {
+  background: rgb(47 139 255 / 0.1);
+}
+
+.mk-rewind-entry--pick > i {
+  border-color: var(--mk-blue);
+  background: var(--mk-blue) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='m3 6 2 2 4-4' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 100% no-repeat;
+  animation: rw-check 7s var(--ease-out) infinite;
+}
+
+.mk-rewind-state {
+  display: grid;
+  margin-left: auto;
+  font-size: 0.56rem;
+  font-style: normal;
+}
+
+.mk-rewind-state i {
+  grid-area: 1 / 1;
+  justify-self: end;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--mk-line);
+  border-radius: var(--radius-pill);
+  background: var(--mk-panel);
+  color: var(--mk-muted);
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.mk-rewind-entry--pick .was {
+  opacity: 0;
+  animation: rw-was 7s var(--ease-out) infinite;
+}
+
+.mk-rewind-entry--pick .now {
+  border-color: rgb(60 207 127 / 0.35);
+  color: var(--mk-green);
+  animation: rw-now 7s var(--ease-out) infinite;
+}
+
+.mk-rewind-sql {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.4rem;
+  background: var(--mk-panel);
+  animation: rw-sql 7s var(--ease-out) infinite;
+}
+
+.mk-rewind-sql small {
+  color: var(--mk-muted);
+  font-size: 0.56rem;
+}
+
+.mk-rewind-sql code {
+  padding: 0;
+  border: 0;
+  background: none;
+  overflow: hidden;
+  color: var(--mk-text);
+  font-size: 0.6rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mk-rewind-sql b {
+  color: var(--mk-kw);
+  font-weight: 400;
+}
+
+.mk-rewind-sql s {
+  color: var(--mk-str);
+  text-decoration: none;
+}
+
+.mk-rewind-sql em {
+  color: var(--mk-num);
+  font-style: normal;
+}
+
+@keyframes rw-check {
+  0%, 10% { background-color: transparent; background-size: 0; }
+  16%, 100% { background-color: var(--mk-blue); background-size: 100%; }
+}
+
+@keyframes rw-sql {
+  0%, 18% { opacity: 0; transform: translateY(6px); }
+  26%, 94% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+
+@keyframes rw-was {
+  0%, 56% { opacity: 1; }
+  60%, 100% { opacity: 0; }
+}
+
+@keyframes rw-now {
+  0%, 56% { opacity: 0; transform: scale(0.9); }
+  62%, 100% { opacity: 1; transform: none; }
+}
+
+/* Secure connections. A packet travels through the tunnel; the chips rest visible. */
+
+.mk-tunnel {
+  display: grid;
+  gap: 0.8rem;
+  padding: 0.9rem 0.8rem 0.8rem;
+}
+
+.mk-tunnel-path {
+  display: flex;
+  align-items: flex-start;
+}
+
+.mk-node {
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  color: var(--mk-muted);
+  font-size: 0.58rem;
+}
+
+.mk-node svg {
+  box-sizing: content-box;
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0.45rem;
+  border: 1px solid var(--mk-line);
+  border-radius: 0.55rem;
+  background: var(--mk-panel);
+  fill: none;
+  stroke: var(--mk-text);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mk-node--hop svg {
+  border-color: rgb(60 207 127 / 0.35);
+  background: rgb(60 207 127 / 0.12);
+  stroke: var(--mk-green);
+}
+
+.mk-wire {
+  position: relative;
+  flex: 1;
+  height: 2px;
+  margin: 1.02rem 0.35rem 0;
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, rgb(60 207 127 / 0.5) 0 4px, transparent 4px 7px);
+}
+
+.mk-wire s {
+  position: absolute;
+  top: -2px;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mk-green);
+  box-shadow: 0 0 8px var(--mk-green);
+  opacity: 0;
+  animation: wire 3s linear infinite;
+}
+
+.mk-wire + .mk-node + .mk-wire s {
+  animation-delay: 1.5s;
+}
+
+.mk-tunnel-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+.mk-tunnel-chips span {
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--mk-line);
+  border-radius: var(--radius-pill);
+  background: var(--mk-panel);
+  font-size: 0.6rem;
+  animation: diff-in 7s var(--ease-out) infinite;
+  animation-delay: calc(var(--i) * 0.35s);
+}
+
+@keyframes wire {
+  0% { left: 0; opacity: 0; }
+  10% { opacity: 1; }
+  45% { left: calc(100% - 6px); opacity: 1; }
+  50%, 100% { left: calc(100% - 6px); opacity: 0; }
+}
+
 /* "And plenty more" card */
 
 .card--list {

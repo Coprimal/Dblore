@@ -2298,6 +2298,60 @@ kbd {
   }
 }
 
+/* Database logo tile: the brand mark in its brand color (--c) on a tint of it. */
+.logo {
+  --logo-ink: var(--c);
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+}
+
+.logo svg {
+  width: 64%;
+  height: 64%;
+  fill: var(--logo-ink);
+  /* Line-art marks set a stroke-width on their symbol to read at this size. */
+  stroke: var(--logo-ink);
+  stroke-width: 0;
+  stroke-linejoin: round;
+}
+
+/* Yellow marks need a dark tile to read, as their brands show them. */
+.logo--dark {
+  background: #1b1b1f;
+}
+
+:root[data-theme="dark"] .logo:not(.logo--dark),
+.mk-plugin .logo:not(.logo--dark) {
+  --logo-ink: color-mix(in oklch, var(--c) 55%, white);
+  background: color-mix(in srgb, var(--c) 22%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logo:not(.logo--dark) {
+    --logo-ink: color-mix(in oklch, var(--c) 55%, white);
+    background: color-mix(in srgb, var(--c) 22%, transparent);
+  }
+}
+
+/* Lift dark brand colors to a readable lightness, keeping their hue and chroma. */
+@supports (color: oklch(from red l c h)) {
+  :root[data-theme="dark"] .logo:not(.logo--dark),
+  .mk-plugin .logo:not(.logo--dark) {
+    --logo-ink: oklch(from var(--c) max(l, 0.8) c h);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .logo:not(.logo--dark) {
+      --logo-ink: oklch(from var(--c) max(l, 0.8) c h);
+    }
+  }
+}
+
 /* ---------- Plugins ---------- */
 
 .split {
@@ -2367,6 +2421,11 @@ kbd {
 
 .mk-plugin + .mk-plugin {
   border-top: 1px solid var(--mk-line);
+}
+
+.mk-plugin .logo {
+  width: 1.6rem;
+  height: 1.6rem;
 }
 
 .mk-plugin .mono {

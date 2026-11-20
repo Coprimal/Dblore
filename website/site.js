@@ -1,3 +1,7 @@
+// Mark that scripts run: styles that hide content until it is revealed apply only with this class,
+// so a page whose script fails to load still shows everything.
+document.documentElement.classList.add("js");
+
 // Theme toggle. The saved theme is applied early by a tiny inline script in <head>.
 (() => {
   const root = document.documentElement;
@@ -204,4 +208,169 @@
 
   layout();
   new ResizeObserver(layout).observe(strip);
+})();
+
+// Header: draw its bottom rule once the page scrolls under it.
+(() => {
+  const header = document.querySelector(".site-header");
+  if (!header) return;
+  const update = () => header.classList.toggle("is-scrolled", scrollY > 4);
+  addEventListener("scroll", update, { passive: true });
+  update();
+})();
+
+// Scroll reveal and on-screen-only animation. [data-reveal] fades in once; a .vignette plays its
+// loop only while it is visible. Without IntersectionObserver everything shows and plays.
+(() => {
+  const reveals = [...document.querySelectorAll("[data-reveal]")];
+  const vignettes = [...document.querySelectorAll(".vignette")];
+  if (!("IntersectionObserver" in window)) {
+    reveals.forEach((el) => el.classList.add("is-revealed"));
+    vignettes.forEach((el) => el.classList.add("is-playing"));
+    return;
+  }
+
+  // Siblings revealed together come in one after another.
+  for (const el of reveals) {
+    const siblings = [...el.parentElement.children].filter((child) => child.hasAttribute("data-reveal"));
+    const index = siblings.indexOf(el) % 3;
+    if (index > 0) el.style.transitionDelay = `${index * 80}ms`;
+  }
+
+  const revealer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        entry.target.classList.add("is-revealed");
+        revealer.unobserve(entry.target);
+      }
+    },
+    { rootMargin: "0px 0px -8% 0px" }
+  );
+  reveals.forEach((el) => revealer.observe(el));
+
+  const player = new IntersectionObserver((entries) => {
+    for (const entry of entries) entry.target.classList.toggle("is-playing", entry.isIntersecting);
+  });
+  vignettes.forEach((el) => player.observe(el));
+})();
+
+// Workspace tabs: a click selects at once; Left/Right move between tabs.
+(() => {
+  const tabs = [...document.querySelectorAll('.capsule-tabs [role="tab"]')];
+  if (!tabs.length) return;
+  const panels = tabs.map((tab) => document.getElementById(tab.getAttribute("aria-controls")));
+
+  const select = (index, focus) => {
+    tabs.forEach((tab, i) => {
+      const on = i === index;
+      tab.setAttribute("aria-selected", String(on));
+      tab.tabIndex = on ? 0 : -1;
+      panels[i].hidden = !on;
+    });
+    if (focus) tabs[index].focus();
+  };
+
+  tabs.forEach((tab, i) => {
+    tab.addEventListener("click", () => select(i));
+    tab.addEventListener("keydown", (event) => {
+      const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+      if (!step) return;
+      event.preventDefault();
+      select((i + step + tabs.length) % tabs.length, true);
+    });
+  });
+
+  // Load the hidden screenshots once the section comes near, so switching never waits.
+  const stage = panels[0].parentElement;
+  const load = () => panels.forEach((panel) => panel.querySelector("img")?.setAttribute("loading", "eager"));
+  if (!("IntersectionObserver" in window)) return load();
+  const watcher = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      load();
+      watcher.disconnect();
+    },
+    { rootMargin: "400px 0px" }
+  );
+  watcher.observe(stage);
+})();
+
+// Hero demo: the notebook cell types its query, runs it, shows the rows, then switches to a chart,
+// and loops. It pauses off screen and in a background tab. Reduced motion keeps the static chart.
+(() => {
+  const demo = document.getElementById("hero-demo");
+  const code = document.getElementById("hero-code");
+  if (!demo || !code || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  // The highlighted runs of the query; typing re-renders the first n characters.
+  const runs = [...code.childNodes].map((node) => ({
+    text: node.textContent,
+    className: node.nodeType === Node.ELEMENT_NODE ? node.className : "",
+  }));
+  const total = runs.reduce((sum, run) => sum + run.text.length, 0);
+
+  const render = (count) => {
+    const fragment = document.createDocumentFragment();
+    let left = count;
+    for (const run of runs) {
+      if (left <= 0) break;
+      const text = run.text.slice(0, left);
+      left -= text.length;
+      if (run.className) {
+        const span = document.createElement("span");
+        span.className = run.className;
+        span.textContent = text;
+        fragment.append(span);
+      } else {
+        fragment.append(text);
+      }
+    }
+    code.replaceChildren(fragment);
+  };
+
+  let onScreen = false;
+  let resume = null;
+  const wake = () => {
+    if (onScreen && !document.hidden && resume) {
+      resume();
+      resume = null;
+    }
+  };
+  const ready = () =>
+    onScreen && !document.hidden ? Promise.resolve() : new Promise((resolve) => (resume = resolve));
+  const wait = async (ms) => {
+    await ready();
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  };
+
+  new IntersectionObserver((entries) => {
+    onScreen = entries.some((entry) => entry.isIntersecting);
+    wake();
+  }).observe(demo);
+  document.addEventListener("visibilitychange", wake);
+
+  const play = async () => {
+    for (;;) {
+      demo.dataset.stage = "type";
+      render(0);
+      await wait(500);
+      const text = runs.map((run) => run.text).join("");
+      for (let i = 1; i <= total; i++) {
+        render(i);
+        await wait(text[i - 1] === "\n" ? 160 : 26);
+      }
+      await wait(500);
+      demo.dataset.stage = "run";
+      await wait(850);
+      demo.dataset.stage = "grid";
+      await wait(2600);
+      demo.dataset.stage = "chart";
+      await wait(4200);
+    }
+  };
+
+  demo.dataset.stage = "type";
+  render(0);
+  play();
 })();

@@ -12,12 +12,12 @@ Open http://localhost:8080.
 
 ## Structure
 
-- `index.html`: landing page. `docs.html`: documentation. `privacy.html`: privacy statement. `features.html`: searchable feature catalog.
+- `index.html`: landing page (hero demo, workspace tabs, feature cards with animated mock-ups, databases, plugins, privacy, screenshots). `docs.html`: documentation. `privacy.html`: privacy statement. `features.html`: searchable feature catalog. All four pages share the same header, footer and `styles.css`: change the header or footer in every page together.
 - `features-data.js`: fixed feature IDs, descriptions, first available versions and internal source/release evidence. `features.js`: table sorting, fuzzy search and issue links. `features.test.js`: Node built-in tests (`node --test website/features.test.js`).
-- `tokens.css`: design tokens (OKLCH colors, Geist fonts, spacing). `styles.css`: layout and components.
-- `site.js`: theme toggle (the saved theme is applied by an inline script in each `<head>`).
+- `tokens.css`: design tokens (OKLCH colors, the dark `--mk-*` palette of the app mock-ups, Geist fonts, spacing). `styles.css`: layout, components and the CSS animations of the mock-ups (they play only while on screen and stop under reduced motion).
+- `site.js`: the `js` class that turns on scroll reveal, theme toggle (the saved theme is applied by an inline script in each `<head>`), docs scroll-spy, header version, screenshot lightbox, scroll reveal, workspace tabs and the hero demo.
 - The app version in each page header (`.version-badge`) is read at runtime from the same-origin `appcast.xml` (highest build number) by `site.js`; the static `v0.4.0` in each page is only a fallback for no-JS, local preview or fetch failure, so no hand edit is needed on release.
-- `logo.png`, `poster.jpg`, `screenshots/`: images (screenshots are the clean captures in `docs/showcase/source/clean-shots/` with a database/feature ribbon added by `docs/showcase/source/label-shots.py`). `og.jpg`: the 1200×630 social card (`og:image`), rendered from `docs/showcase/source/og.html`. `CNAME`: custom domain. `.nojekyll`: disables Jekyll.
+- `logo.png`, `screenshots/`: images (`poster.jpg` is no longer shown on the site) (screenshots are the clean captures in `docs/showcase/source/clean-shots/` with a database/feature ribbon added by `docs/showcase/source/label-shots.py`). `og.jpg`: the 1200×630 social card (`og:image`), rendered from `docs/showcase/source/og.html`. `CNAME`: custom domain. `.nojekyll`: disables Jekyll.
 
 ## Feature catalog maintenance
 
